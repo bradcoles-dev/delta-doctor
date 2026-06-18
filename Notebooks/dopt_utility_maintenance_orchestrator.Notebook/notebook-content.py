@@ -108,25 +108,38 @@ def optimize_if_needed(fully_qualified_name, target_mb=400, tolerance=0.8):
     Runs OPTIMIZE on a Delta table only if the average file size is meaningfully
     below the target. Tables already at or near the target are skipped.
 
-    Returns "optimized" or "skipped".
+    Returns a dict with result ("optimized" or "skipped") and, when optimized,
+    files_before, files_after, and files_compacted for summary reporting.
     """
-    details   = spark.sql(f"DESCRIBE DETAIL {fully_qualified_name}").collect()[0]
-    num_files = details['numFiles']
+    details_before   = spark.sql(f"DESCRIBE DETAIL {fully_qualified_name}").collect()[0]
+    num_files_before = details_before['numFiles']
 
-    if num_files == 0:
+    if num_files_before == 0:
         print(f"  {fully_qualified_name}: skipped - no files")
-        return "skipped"
+        return {"result": "skipped"}
 
-    avg_file_size_mb = (details['sizeInBytes'] / num_files) / (1024**2)
-    threshold_mb     = target_mb * tolerance
+    avg_mb_before = (details_before['sizeInBytes'] / num_files_before) / (1024**2)
+    threshold_mb  = target_mb * tolerance
 
-    if avg_file_size_mb < threshold_mb:
-        spark.sql(f"OPTIMIZE {fully_qualified_name}")
-        print(f"  {fully_qualified_name}: OPTIMIZE ran - avg {avg_file_size_mb:.0f}MB (target {target_mb}MB)")
-        return "optimized"
-    else:
-        print(f"  {fully_qualified_name}: skipped - avg {avg_file_size_mb:.0f}MB is within tolerance")
-        return "skipped"
+    if avg_mb_before >= threshold_mb:
+        print(f"  {fully_qualified_name}: skipped - avg {avg_mb_before:.0f}MB is within tolerance")
+        return {"result": "skipped"}
+
+    spark.sql(f"OPTIMIZE {fully_qualified_name}")
+
+    details_after   = spark.sql(f"DESCRIBE DETAIL {fully_qualified_name}").collect()[0]
+    num_files_after = details_after['numFiles']
+    avg_mb_after    = (details_after['sizeInBytes'] / num_files_after) / (1024**2) if num_files_after > 0 else 0
+    files_compacted = num_files_before - num_files_after
+
+    print(f"  {fully_qualified_name}: OPTIMIZE ran - files {num_files_before:,} → {num_files_after:,} ({files_compacted:,} compacted) | avg {avg_mb_before:.0f}MB → {avg_mb_after:.0f}MB")
+
+    return {
+        "result":          "optimized",
+        "files_before":    num_files_before,
+        "files_after":     num_files_after,
+        "files_compacted": files_compacted,
+    }
 
 
 def vacuum_table(fully_qualified_name, retain_hours=168):
@@ -162,10 +175,11 @@ run_vacuum = force_vacuum or datetime.today().weekday() == 6  # 6 = Sunday
 
 tables = spark.sql(f"SHOW TABLES IN {lakehouse_guid}").collect()
 
-optimized_count = 0
-skipped_count   = 0
-vacuumed_count  = 0
-error_count     = 0
+optimized_count      = 0
+skipped_count        = 0
+vacuumed_count       = 0
+error_count          = 0
+files_compacted_total = 0
 
 print(f"Tables found : {len(tables)}")
 print(f"VACUUM active: {run_vacuum}")
@@ -177,8 +191,9 @@ for row in tables:
 
     try:
         result = optimize_if_needed(fully_qualified_name, target_mb=target_mb)
-        if result == "optimized":
-            optimized_count += 1
+        if result["result"] == "optimized":
+            optimized_count       += 1
+            files_compacted_total += result.get("files_compacted", 0)
         else:
             skipped_count += 1
 
@@ -191,7 +206,7 @@ for row in tables:
         error_count += 1
 
 print("-" * 60)
-print(f"Summary - optimized: {optimized_count} | skipped: {skipped_count} | vacuumed: {vacuumed_count} | errors: {error_count}")
+print(f"Summary - optimized: {optimized_count} | skipped: {skipped_count} | vacuumed: {vacuumed_count} | errors: {error_count} | files compacted: {files_compacted_total:,}")
 
 # METADATA ********************
 

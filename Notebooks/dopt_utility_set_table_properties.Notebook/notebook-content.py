@@ -24,6 +24,12 @@
 # ## When to use this
 # Run once per table at setup time, or call from an onboarding pipeline when a new table
 # is added to the Lakehouse. It is not intended to run on every pipeline execution.
+# ## Custom mode
+# Pass `layer = "custom"` to specify each property value explicitly. In custom mode the
+# layer defaults are ignored and only the properties you specify are set. Leave a custom
+# parameter as `""` (or `0` for `target_file_size_mb`) to skip that property entirely.
+# Use custom mode for tables that do not fit a standard medallion layer — data products,
+# external-facing tables, or architectures that do not follow Bronze / Silver / Gold.
 # ## Layer behaviour
 # | Property | Bronze | Silver | Gold |
 # |---|---|---|---|
@@ -31,6 +37,15 @@
 # | `delta.autoOptimize.autoCompact` | `true` | `true` | `true` |
 # | `delta.autoOptimize.optimizeWrite` | `false` | `true` | `true` |
 # | `delta.parquet.vorder.enabled` | `false` | `false` | `true` |
+# | `delta.targetFileSize` | 128 MB | 256 MB | 400 MB |
+#
+# ### delta.targetFileSize and ATFS
+# `delta.targetFileSize` sets a per-table ceiling. Adaptive Target File Size (ATFS),
+# enabled in `dopt_utility_session_config`, adapts that target downward for small tables —
+# preventing a 10 MB table from being compacted into a single 400 MB file. The two settings
+# work together: ATFS needs a ceiling to adapt from; this property provides it per table
+# rather than relying on a single workspace-wide default.
+#
 # The logic mirrors `dopt_utility_session_config`:
 # - **Bronze**: `optimizeWrite` is disabled — append-only batch loads do not benefit from
 #   the shuffle that optimize write introduces
@@ -65,8 +80,15 @@
 
 lakehouse_guid = ""        # The GUID of the Lakehouse containing the target table
 table_name     = ""        # The table name (without schema prefix), e.g. "fact_sales"
-layer          = "silver"  # Medallion layer: "bronze", "silver", or "gold"
+layer          = "silver"  # Medallion layer: "bronze", "silver", "gold", or "custom"
 cluster_by     = ""        # Comma-separated cluster key columns, e.g. "customer_id, order_date". "" to skip
+
+# Custom mode parameters — only used when layer = "custom". "" to skip a property.
+custom_deletion_vectors   = "true"   # delta.enableDeletionVectors
+custom_auto_compact       = "true"   # delta.autoOptimize.autoCompact
+custom_optimize_write     = "true"   # delta.autoOptimize.optimizeWrite
+custom_v_order            = "false"  # delta.parquet.vorder.enabled
+custom_target_file_size_mb = 0       # delta.targetFileSize in MB; 0 to skip
 
 # METADATA ********************
 
@@ -82,8 +104,13 @@ cluster_by     = ""        # Comma-separated cluster key columns, e.g. "customer
 # |---|---|---|
 # | `lakehouse_guid` | string | The GUID of the Lakehouse. Found in the Lakehouse URL in the Fabric portal |
 # | `table_name` | string | Table name without schema prefix (e.g. `fact_sales`) |
-# | `layer` | string | The medallion layer this table belongs to. Accepts `"bronze"`, `"silver"`, or `"gold"`. Default: `"silver"` |
-# | `cluster_by` | string | Comma-separated column names to use as the liquid clustering key (e.g. `"customer_id, order_date"`). Pass `""` to skip. Do not use on partitioned tables |
+# | `layer` | string | Accepts `"bronze"`, `"silver"`, `"gold"`, or `"custom"`. Default: `"silver"` |
+# | `cluster_by` | string | Comma-separated column names for liquid clustering (e.g. `"customer_id, order_date"`). `""` to skip. Do not use on partitioned tables |
+# | `custom_deletion_vectors` | string | **Custom mode only.** `"true"`, `"false"`, or `""` to skip |
+# | `custom_auto_compact` | string | **Custom mode only.** `"true"`, `"false"`, or `""` to skip |
+# | `custom_optimize_write` | string | **Custom mode only.** `"true"`, `"false"`, or `""` to skip |
+# | `custom_v_order` | string | **Custom mode only.** `"true"`, `"false"`, or `""` to skip |
+# | `custom_target_file_size_mb` | integer | **Custom mode only.** Target file size in MB. `0` to skip |
 
 
 # MARKDOWN ********************
@@ -95,7 +122,8 @@ cluster_by     = ""        # Comma-separated cluster key columns, e.g. "customer
 
 # ── Validation ────────────────────────────────────────────────────────────────
 
-valid_layers = {"bronze", "silver", "gold"}
+valid_layers      = {"bronze", "silver", "gold", "custom"}
+valid_bool_values = {"true", "false", ""}
 
 if not lakehouse_guid:
     raise ValueError("Parameter 'lakehouse_guid' is required but was not provided.")
@@ -106,7 +134,20 @@ if not table_name:
 if not layer or layer.lower() not in valid_layers:
     raise ValueError(f"Parameter 'layer' must be one of: {', '.join(sorted(valid_layers))}. Got: '{layer}'")
 
-layer                = layer.lower()
+layer = layer.lower()
+
+if layer == "custom":
+    for param_name, param_value in [
+        ("custom_deletion_vectors", custom_deletion_vectors),
+        ("custom_auto_compact",     custom_auto_compact),
+        ("custom_optimize_write",   custom_optimize_write),
+        ("custom_v_order",          custom_v_order),
+    ]:
+        if param_value.lower() not in valid_bool_values:
+            raise ValueError(f"Parameter '{param_name}' must be 'true', 'false', or '' to skip. Got: '{param_value}'")
+    if custom_target_file_size_mb < 0:
+        raise ValueError(f"Parameter 'custom_target_file_size_mb' must be 0 (skip) or a positive integer. Got: {custom_target_file_size_mb}")
+
 fully_qualified_name = f"{lakehouse_guid}.{table_name}"
 
 print(f"Target table: {fully_qualified_name}")
@@ -137,29 +178,48 @@ LAYER_PROPERTIES = {
         "delta.autoOptimize.autoCompact":    "true",
         "delta.autoOptimize.optimizeWrite":  "false",
         "delta.parquet.vorder.enabled":      "false",
+        "delta.targetFileSize":              str(128 * 1024 * 1024),   # 128 MB in bytes
     },
     "silver": {
         "delta.enableDeletionVectors":       "true",
         "delta.autoOptimize.autoCompact":    "true",
         "delta.autoOptimize.optimizeWrite":  "true",
         "delta.parquet.vorder.enabled":      "false",
+        "delta.targetFileSize":              str(256 * 1024 * 1024),   # 256 MB in bytes
     },
     "gold": {
         "delta.enableDeletionVectors":       "true",
         "delta.autoOptimize.autoCompact":    "true",
         "delta.autoOptimize.optimizeWrite":  "true",
         "delta.parquet.vorder.enabled":      "true",
+        "delta.targetFileSize":              str(400 * 1024 * 1024),   # 400 MB in bytes
     },
 }
 
-props       = LAYER_PROPERTIES[layer]
+if layer == "custom":
+    props = {}
+    if custom_deletion_vectors.strip():
+        props["delta.enableDeletionVectors"]      = custom_deletion_vectors.lower()
+    if custom_auto_compact.strip():
+        props["delta.autoOptimize.autoCompact"]   = custom_auto_compact.lower()
+    if custom_optimize_write.strip():
+        props["delta.autoOptimize.optimizeWrite"] = custom_optimize_write.lower()
+    if custom_v_order.strip():
+        props["delta.parquet.vorder.enabled"]     = custom_v_order.lower()
+    if custom_target_file_size_mb > 0:
+        props["delta.targetFileSize"]             = str(custom_target_file_size_mb * 1024 * 1024)
+    if not props:
+        print("Custom mode: no properties specified — nothing was changed.")
+else:
+    props = LAYER_PROPERTIES[layer]
+
 props_str   = ", ".join(f"'{k}' = '{v}'" for k, v in props.items())
 
-spark.sql(f"ALTER TABLE {fully_qualified_name} SET TBLPROPERTIES ({props_str})")
-
-print(f"Properties set on {fully_qualified_name}:")
-for k, v in props.items():
-    print(f"  {k} = {v}")
+if props:
+    spark.sql(f"ALTER TABLE {fully_qualified_name} SET TBLPROPERTIES ({props_str})")
+    print(f"Properties set on {fully_qualified_name}:")
+    for k, v in props.items():
+        print(f"  {k} = {v}")
 
 if cluster_by.strip():
     spark.sql(f"ALTER TABLE {fully_qualified_name} CLUSTER BY ({cluster_by.strip()})")

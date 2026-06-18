@@ -26,6 +26,8 @@
 # - **Bronze**: baseline + Optimize Write disabled (append-only loads do not benefit from shuffle)
 # - **Silver**: baseline only
 # - **Gold**: baseline + V-Order enabled (consumer-facing; Direct Lake and SQL Endpoint reads benefit)
+# - **Custom**: baseline applied, then `custom_optimize_write` and `custom_v_order` parameter values
+#   override the defaults. Use for architectures that do not follow Bronze / Silver / Gold.
 # ## Note on Optimize Write at Bronze
 # The Bronze override disables Optimize Write for the common append-only batch ingestion case.
 # If your Bronze notebook uses MERGE, UPDATE, or DELETE, re-enable it after calling this notebook:
@@ -38,7 +40,11 @@
 # These values are overridden at runtime by the Fabric pipeline.
 # Default values below are used when running the notebook interactively.
 
-layer = "silver"    # Medallion layer: "bronze", "silver", or "gold"
+layer = "silver"    # Medallion layer: "bronze", "silver", "gold", or "custom"
+
+# Custom mode parameters — only used when layer = "custom"
+custom_optimize_write = True   # spark.databricks.delta.optimizeWrite.enabled
+custom_v_order        = False  # spark.sql.parquet.vorder.default
 
 # METADATA ********************
 
@@ -52,7 +58,9 @@ layer = "silver"    # Medallion layer: "bronze", "silver", or "gold"
 # ## Parameters
 # | Parameter | Type | Description |
 # |---|---|---|
-# | `layer` | string | The medallion layer this notebook is running in. Accepts `"bronze"`, `"silver"`, or `"gold"`. Default: `"silver"` |
+# | `layer` | string | Accepts `"bronze"`, `"silver"`, `"gold"`, or `"custom"`. Default: `"silver"` |
+# | `custom_optimize_write` | boolean | **Custom mode only.** Sets `optimizeWrite.enabled`. Default: `True` |
+# | `custom_v_order` | boolean | **Custom mode only.** Sets `vorder.default`. Default: `False` |
 
 
 # MARKDOWN ********************
@@ -64,7 +72,7 @@ layer = "silver"    # Medallion layer: "bronze", "silver", or "gold"
 
 # ── Validation ────────────────────────────────────────────────────────────────
 
-valid_layers = {"bronze", "silver", "gold"}
+valid_layers = {"bronze", "silver", "gold", "custom"}
 
 if not layer or layer.lower() not in valid_layers:
     raise ValueError(f"Parameter 'layer' must be one of: {', '.join(sorted(valid_layers))}. Got: '{layer}'")
@@ -135,6 +143,11 @@ if layer == "bronze":
 elif layer == "gold":
     spark.conf.set("spark.sql.parquet.vorder.default", "true")
     print("Gold override applied: V-Order enabled (Direct Lake and SQL Endpoint consumers).")
+
+elif layer == "custom":
+    spark.conf.set("spark.databricks.delta.optimizeWrite.enabled", str(custom_optimize_write).lower())
+    spark.conf.set("spark.sql.parquet.vorder.default",             str(custom_v_order).lower())
+    print(f"Custom override applied: Optimize Write = {custom_optimize_write}, V-Order = {custom_v_order}.")
 
 else:
     print("Silver: no overrides - baseline is correct for this layer.")

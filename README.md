@@ -1,5 +1,8 @@
 # delta-optimizer
 
+[![Version](https://img.shields.io/badge/version-v0.1-blue)](https://github.com/bradcoles-dev/delta-optimizer/releases)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green)](LICENSE)
+
 **Production-ready Delta table maintenance for Microsoft Fabric.**
 
 Fabric capacity SKUs double in cost at every tier. Poor Delta table maintenance silently inflates that cost over time — tables accumulate small files, deletion vectors build up, liquid clustering goes stale, and queries scan far more data than they need to. The platform is working harder than it should, not because you have more data or more users, but because the tables have never been properly maintained.

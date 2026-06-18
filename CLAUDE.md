@@ -60,6 +60,8 @@ The file must open with:
 | Silver | 256 MB          |
 | Gold   | 400 MB          |
 
+`delta.targetFileSize` is set as a table property (in bytes) to give ATFS a per-table ceiling. ATFS (`spark.microsoft.delta.targetFileSize.adaptive.enabled`) then adapts that target downward for small tables. The two work together — do not remove either.
+
 ### Layer behaviour (session config and table properties)
 | Setting | Bronze | Silver | Gold |
 |---|---|---|---|
