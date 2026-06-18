@@ -46,7 +46,10 @@
 # rather than relying on a single workspace-wide default.
 # The logic mirrors `dopt_utility_session_config`:
 # - **Bronze**: `optimizeWrite` is disabled — append-only batch loads do not benefit from
-#   the shuffle that optimize write introduces
+#   the shuffle that optimize write introduces. If your Bronze ingestion always uses MERGE,
+#   UPDATE, or DELETE, call this notebook with `layer = "custom"` and
+#   `custom_optimize_write = "true"` instead — the table property overrides the session
+#   config, so setting it correctly here is the permanent fix
 # - **Silver**: full baseline; V-Order is off because Silver tables are read by downstream
 #   Spark notebooks, not directly by Power BI
 # - **Gold**: V-Order enabled — consumer-facing tables served via Direct Lake or the SQL

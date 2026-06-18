@@ -26,6 +26,12 @@
 # - Surfaces partitioned tables (candidates for liquid clustering migration) and tables
 #   without deletion vectors enabled
 # - Handles both schema-enabled and non-schema Lakehouses automatically
+# ## Custom mode
+# Pass `layer = "custom"` to assess tables against a non-standard target file size. Set
+# `custom_target_mb` to your target in MB — status classification uses that value instead
+# of a layer default. Leave `custom_target_mb = 0` to see raw metrics with no status
+# classification (status shows as `No target set`). Use custom mode for Lakehouses that
+# do not follow Bronze / Silver / Gold, or to assess tables against a non-standard target.
 # ## Prerequisites
 # - `lakehouse_guid` must be provided (see Parameters below)
 # - This notebook must reside in the same Fabric workspace as the target Lakehouse
@@ -69,13 +75,14 @@ custom_target_mb = 0        # Custom mode only: target file size in MB for statu
 # | `liquid_clustering` | Whether the table has a liquid clustering policy defined |
 # | `deletion_vectors` | Tables without deletion vectors enabled are candidates for enabling |
 # | `status` | Triage priority — sort ascending to start from the tables that need the most work |
-# **Status values:**
-# - `Needs OPTIMIZE` — average file size is below 50% of target; priority
-# - `Review` — average file size is between 50% and 100% of target; monitor. Tables between 50% and 80% of target will receive OPTIMIZE from the maintenance notebooks; tables between 80% and 100% will be skipped
-# - `Healthy` — average file size is at or above target
+# **Status values** (in evaluation order):
 # - `Skip - empty table` — table has no files; may be freshly created or fully vacuumed
 # - `Skip - single file` — table has one file; nothing to compact (trivially small or already fully compacted)
 # - `No target set` — custom mode with no target specified; raw metrics only
+# - `Oversized` — average file size exceeds 2× target; run `dopt_utility_rebaseline_orchestrator` to rewrite and right-size all files. Note: average file size is a proxy — a bimodal mix of small and large files may not be detected
+# - `Healthy` — average file size is at or above target and within 2× target
+# - `Review` — average file size is between 50% and 100% of target; monitor. Tables between 50% and 80% of target will receive OPTIMIZE from the maintenance notebooks; tables between 80% and 100% will be skipped
+# - `Needs OPTIMIZE` — average file size is below 50% of target; priority
 
 
 # MARKDOWN ********************
@@ -191,6 +198,8 @@ for entry in tables:
             status = "Skip - single file"
         elif target_mb is None:
             status = "No target set"
+        elif avg_mb > target_mb * 2:
+            status = "Oversized"
         elif avg_mb >= target_mb:
             status = "Healthy"
         elif avg_mb >= target_mb / 2:

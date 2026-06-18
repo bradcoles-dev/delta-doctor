@@ -38,6 +38,7 @@ The library is:
 | `dopt_utility_maintenance_orchestrator` | Iterates all tables in a Lakehouse, running OPTIMIZE and VACUUM on each. Logs before/after metrics per table and prints a run summary including total files compacted | Scheduled pipeline; useful before adopting per-table pipeline calls |
 | `dopt_utility_set_table_properties` | Sets Delta table properties (deletion vectors, auto-compaction, optimize write, V-Order, target file size) on a single table by layer. Supports a custom mode for non-medallion tables. Optionally enables liquid clustering | Run once per table at setup time, or called from an onboarding pipeline |
 | `dopt_utility_set_properties_orchestrator` | Iterates all tables in a Lakehouse and calls `dopt_utility_set_table_properties` for each. Run once per Lakehouse at onboarding time, passing the matching `layer` for that Lakehouse. Does not apply liquid clustering — cluster keys are per-table and must be set via `dopt_utility_set_table_properties` directly | One-off onboarding pipeline; run once per medallion Lakehouse |
+| `dopt_utility_rebaseline_orchestrator` | Runs `REORG TABLE APPLY (PURGE)` followed by OPTIMIZE on every table in a Lakehouse, rewriting all files to the correct layer target and purging accumulated deletion vectors. Run once on a previously unmaintained Lakehouse before switching to the maintenance orchestrator for ongoing maintenance | One-off rebaseline; run after `dopt_utility_set_properties_orchestrator`, before ongoing maintenance |
 
 > **Schema support:** All notebooks use ABFSS paths and handle both schema-enabled Lakehouses (`Tables/{schema}/{table}`) and non-schema Lakehouses (`Tables/{table}`) automatically.
 
@@ -82,6 +83,9 @@ Session configs apply only to the current notebook session. For tables written b
 3. Start with `dopt_utility_table_health` — pass `lakehouse_guid` as a parameter and run it to see the current state of your tables before changing anything
 4. Run `dopt_utility_set_properties_orchestrator` once per Lakehouse to set the correct Delta table properties for every table. Pass the `lakehouse_guid` and the `layer` for that Lakehouse
 5. Run `dopt_utility_maintenance_orchestrator` to compact small files and reclaim storage across all tables. On a previously unmaintained Lakehouse the first run will take longer than subsequent runs — expect at least minutes per table depending on size and fragmentation. Monitor progress in the Spark UI. Subsequent runs cost almost nothing when tables are already healthy
+
+> Steps 3–5 are one-time setup. Steps 6–7 are the ongoing pattern — wired into every pipeline going forward.
+
 6. Add a call to `dopt_utility_session_config` at the top of each pipeline notebook, passing the layer as a parameter
 7. Wire `dopt_utility_table_maintenance` as the final activity in each pipeline going forward. Required parameters: `lakehouse_guid`, `table_name`, `layer`. Optional: `schema_name` (schema-enabled Lakehouses only), `force_vacuum` (default `False`; set `True` for ad-hoc runs after large backfills). When `layer = "custom"`, `custom_target_mb` is also required — must be a positive integer specifying the target file size in MB
 
@@ -94,7 +98,7 @@ Detailed setup guides are in [`/docs`](./docs/).
 ## Roadmap
 
 ### v0.1 — Fabric Notebook Library *(current)*
-Six notebooks covering session config, table health scanning, single-table maintenance, Lakehouse-wide maintenance orchestration, table property management, and Lakehouse-wide property orchestration. Deployable directly into any Fabric workspace.
+Seven notebooks covering session config, table health scanning, single-table maintenance, Lakehouse-wide maintenance orchestration, table property management, Lakehouse-wide property orchestration, and one-off Lakehouse rebaselining. Deployable directly into any Fabric workspace.
 
 ### v0.2 — Observability
 **Health history logging.** `dopt_utility_table_health` gains an optional `history_lakehouse_guid` parameter. When provided, it appends the full Lakehouse snapshot to a `dopt_table_health_history` Delta table at the end of each run — one write, one clean timestamped snapshot per execution. When empty, the notebook behaves exactly as it does today (interactive display only), preserving the existing use case.
@@ -104,6 +108,8 @@ The history table schema is the existing health report columns plus `run_timesta
 **Power BI dashboard.** A Direct Lake semantic model built on `dopt_table_health_history` enables a Delta table health monitoring dashboard — trend lines per table, status breakdowns, tables that are degrading between runs. No additional infrastructure beyond the existing Lakehouse.
 
 **Control table.** A Delta table mapping `table_name → layer` to allow `dopt_utility_set_properties_orchestrator` to apply per-table layer overrides (e.g. a Silver table configured with Gold properties for Direct Lake), removing the current assumption that all tables in a Lakehouse share the same layer.
+
+**File size distribution.** The v0.1 maintenance notebooks use average file size as a proxy for compaction decisions. A bimodal distribution of small and large files (e.g. three 200 MB files and one 1 GB file on a 400 MB Gold target) may not be detected correctly by the average alone. Health history data enables per-file size distribution analysis — improving REORG gating accuracy — planned for v0.2.
 
 **Gates:**
 - *Entry:* Each feature above is specified in enough detail to build — history table schema finalised, control table schema and lookup behaviour defined, Power BI dashboard requirements documented

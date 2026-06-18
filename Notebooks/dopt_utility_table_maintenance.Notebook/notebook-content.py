@@ -31,6 +31,11 @@
 # causing queries to scan far more data than necessary. This silently inflates capacity
 # consumption over time — the difference between a well-maintained platform and a neglected
 # one can be the difference between your current SKU and the next one up.
+# ## Custom mode
+# Pass `layer = "custom"` for tables that do not follow a standard medallion layer. When
+# using custom mode, `custom_target_mb` is required and must be a positive integer — it
+# sets the target file size in MB used to gate whether OPTIMIZE runs. The notebook raises
+# a `ValueError` at startup if `custom_target_mb` is missing or zero when `layer = "custom"`.
 # ## Prerequisites
 # - This notebook must be called from a Fabric pipeline via the Notebook activity
 # - Parameters must be passed by the pipeline (see Parameters cell below)

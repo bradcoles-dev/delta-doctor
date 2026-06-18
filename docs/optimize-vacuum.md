@@ -75,7 +75,7 @@ To run OPTIMIZE and VACUUM across all tables in a Lakehouse, use `dopt_utility_m
 - VACUUM on Gold tables: confirm the semantic model has been re-framed to the current Delta version before the weekly run to avoid Direct Lake query errors
 - Fast Optimize handles bin-level evaluation within each OPTIMIZE run — the average file size check gates whether to start the command at all; they are complementary
 
-> **Path syntax in Fabric:** SQL statements reference Delta tables via ABFSS path. Use `'{table_path}'` for OPTIMIZE and VACUUM, and `delta.\`{table_path}\`` for ALTER TABLE and DESCRIBE statements, where `{table_path}` is the full ABFSS path: `abfss://{workspace_guid}@onelake.dfs.fabric.microsoft.com/{lakehouse_guid}/Tables/{table_name}`.
+> **Path syntax in Fabric:** SQL statements reference Delta tables via ABFSS path. Use `'{table_path}'` for OPTIMIZE, VACUUM, and DESCRIBE DETAIL. Use `delta.\`{table_path}\`` for ALTER TABLE and DESCRIBE HISTORY. `{table_path}` is the full ABFSS path: `abfss://{workspace_guid}@onelake.dfs.fabric.microsoft.com/{lakehouse_guid}/Tables/{table_name}`.
 
 ### DRY RUN
 

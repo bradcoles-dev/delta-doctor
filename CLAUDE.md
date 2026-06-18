@@ -86,6 +86,7 @@ SQL syntax by operation:
 - `DESCRIBE DETAIL '{table_path}'`
 - `OPTIMIZE '{table_path}'`
 - `VACUUM '{table_path}' RETAIN {hours} HOURS`
+- `REORG TABLE delta.\`{table_path}\` APPLY (PURGE)`
 - `ALTER TABLE delta.\`{table_path}\` SET TBLPROPERTIES (...)`
 - `ALTER TABLE delta.\`{table_path}\` CLUSTER BY (...)`
 
@@ -119,6 +120,7 @@ Enabling `delta.enableDeletionVectors` upgrades the Delta table protocol. Always
 | `dopt_utility_maintenance_orchestrator` | OPTIMIZE + VACUUM across all tables in a Lakehouse |
 | `dopt_utility_set_table_properties` | Delta table properties + liquid clustering on a single table |
 | `dopt_utility_set_properties_orchestrator` | Table properties across all tables in a Lakehouse |
+| `dopt_utility_rebaseline_orchestrator` | One-off REORG TABLE APPLY (PURGE) + OPTIMIZE across all tables in a Lakehouse to reset file sizes to the layer target |
 
 ## What not to do
 - Do not write plain `.py` files — all code lives in Fabric notebook format

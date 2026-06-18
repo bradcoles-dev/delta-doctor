@@ -4,7 +4,7 @@ A structured set of acceptance tests to validate that delta-optimizer is working
 
 ## Prerequisites
 
-- All six notebooks are imported into your Fabric workspace
+- All seven notebooks are imported into your Fabric workspace
 - At least one Lakehouse with Delta tables exists in the same workspace
 - The Lakehouse GUID is ready (see [Getting Started](../README.md#getting-started) for how to find it)
 - All notebooks reside in the same Fabric workspace as the target Lakehouse
@@ -111,7 +111,7 @@ Validates table enumeration, health metrics, and status classification. This is 
 **Expected:**
 - One row per Delta table in the Lakehouse
 - `num_files`, `avg_file_mb`, `size_gb` populated for all tables
-- `status` is one of: `Healthy`, `Review`, `Needs OPTIMIZE`, `Skip - single file`, `Skip - empty table` (zero-file tables), `No target set` (custom mode without a target MB specified)
+- `status` is one of: `Needs OPTIMIZE`, `Review`, `Healthy`, `Oversized`, `Skip - single file`, `Skip - empty table`, `No target set`
 - `schema` column is empty (non-schema Lakehouse)
 - Run completes in seconds — no data scan
 
@@ -134,7 +134,7 @@ Re-run with `layer = "bronze"` then `layer = "gold"`. Verify that `status` value
 | `layer` | `custom` |
 | `custom_target_mb` | `0` |
 
-**Expected:** All rows show `No target set` in the `status` column; all other metrics populated normally.
+**Expected:** Tables with 2+ files show `No target set` in the `status` column. Empty tables show `Skip - empty table` and single-file tables show `Skip - single file` — these short-circuit before the target check. All other metrics populated normally.
 
 ### 2.5 — Missing lakehouse_guid
 | Parameter | Value |
@@ -297,6 +297,7 @@ Select a table showing `Healthy` in the health report.
 
 **Error case:** Set `custom_target_mb = 0` with `layer = "custom"`. **Expected:** `ValueError` raised immediately — `custom_target_mb` is required for custom mode.
 
+
 ---
 
 ## 6. dopt_utility_maintenance_orchestrator
@@ -329,11 +330,35 @@ Validates Lakehouse-wide maintenance, summary accuracy, and error resilience.
 
 ---
 
-## 7. Schema-Enabled Lakehouse Validation *(Optional)*
+## 7. dopt_utility_rebaseline_orchestrator *(one-off only)*
 
-Validates the `list_delta_tables()` schema detection logic used by `dopt_utility_table_health`, `dopt_utility_maintenance_orchestrator`, and `dopt_utility_set_properties_orchestrator`. Only required if your environment uses schema-enabled Lakehouses.
+Validates the one-off Lakehouse rebaseline. Only run this once — it performs a full table rewrite on every table and is not intended for recurring use.
 
-### 7.1 — Health scan across schemas
+### 7.1 — Full Lakehouse rebaseline
+| Parameter | Value |
+|---|---|
+| `lakehouse_guid` | Your Lakehouse GUID |
+| `layer` | `silver` |
+
+**Expected:**
+- `Tables found: N` matches the count from `dopt_utility_table_health`
+- Each non-empty table logs: `{table}: rebaselined — files A → B (C compacted) | avg XMB → YMB`
+- Empty tables log: `{table}: skipped — no files`
+- Summary: `rebaselined: N | skipped: 0 | errors: 0 | files compacted: Z`
+- Average file sizes after rebaseline should be near the layer target (256 MB for silver)
+
+**Verify:** Re-run `dopt_utility_table_health` — all non-empty tables should show `Healthy` or `Review`.
+
+### 7.2 — Error resilience
+If any table fails (permissions, external table, etc.), the run continues. The summary error count reflects the failure and all other tables complete normally.
+
+---
+
+## 8. Schema-Enabled Lakehouse Validation *(Optional)*
+
+Validates the `list_delta_tables()` schema detection logic used by `dopt_utility_table_health`, `dopt_utility_maintenance_orchestrator`, `dopt_utility_set_properties_orchestrator`, and `dopt_utility_rebaseline_orchestrator`. Only required if your environment uses schema-enabled Lakehouses.
+
+### 8.1 — Health scan across schemas
 | Parameter | Value |
 |---|---|
 | `lakehouse_guid` | Your schema-enabled Lakehouse GUID |
@@ -344,7 +369,7 @@ Validates the `list_delta_tables()` schema detection logic used by `dopt_utility
 - `schema` column is populated with the correct schema name for each row
 - No tables are missed or duplicated across schema boundaries
 
-### 7.2 — Orchestrator across schemas
+### 8.2 — Orchestrator across schemas
 Run `dopt_utility_maintenance_orchestrator` with the schema-enabled Lakehouse GUID.
 
 **Expected:**
@@ -364,4 +389,5 @@ Run `dopt_utility_maintenance_orchestrator` with the schema-enabled Lakehouse GU
 | 4 | Set properties orchestrator | Full run, error resilience | ☐ |
 | 5 | Table maintenance | OPTIMIZE triggers, skip, forced VACUUM, custom layer | ☐ |
 | 6 | Maintenance orchestrator | Full run, forced VACUUM | ☐ |
-| 7 | Schema-enabled Lakehouses *(optional)* | Health scan, orchestrator | ☐ |
+| 7 | Rebaseline orchestrator *(one-off only)* | Full Lakehouse rebaseline, error resilience | ☐ |
+| 8 | Schema-enabled Lakehouses *(optional)* | Health scan, orchestrator | ☐ |

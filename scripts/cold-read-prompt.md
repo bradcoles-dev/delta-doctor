@@ -26,6 +26,7 @@ Read ALL of the following files in full:
 - `Notebooks/dopt_utility_maintenance_orchestrator.Notebook/notebook-content.py`
 - `Notebooks/dopt_utility_set_table_properties.Notebook/notebook-content.py`
 - `Notebooks/dopt_utility_set_properties_orchestrator.Notebook/notebook-content.py`
+- `Notebooks/dopt_utility_rebaseline_orchestrator.Notebook/notebook-content.py`
 
 **Docs:**
 - `docs/optimize-vacuum.md`
@@ -43,7 +44,7 @@ Read ALL of the following files in full:
 
 ## Known non-issues — do NOT flag these
 
-- `list_delta_tables()` defined identically in three notebooks — intentional, documented in CLAUDE.md
+- `list_delta_tables()` defined identically in four notebooks — intentional, documented in CLAUDE.md (table_health, maintenance_orchestrator, set_properties_orchestrator, rebaseline_orchestrator)
 - The inner `except Exception: pass` in `list_delta_tables()` schema subfolder recursion — intentional silence for non-Delta directories
 - The `mssparkutils.notebook.run()` timeout of 120 seconds in `set_properties_orchestrator` — documented in the notebook header
 - The `optimize-vacuum.md` code block omitting the single-file skip — documented inline as a simplified example
@@ -53,7 +54,7 @@ Read ALL of the following files in full:
 ## What to check
 
 **Cross-notebook consistency:**
-- Do all three `list_delta_tables()` copies have identical function bodies? (table_health, maintenance_orchestrator, set_properties_orchestrator)
+- Do all four `list_delta_tables()` copies have identical function bodies? (table_health, maintenance_orchestrator, set_properties_orchestrator, rebaseline_orchestrator)
 - Do both `optimize_if_needed()` copies handle `num_files == 0` and `num_files == 1` as distinct early exits with distinct messages? (table_maintenance, maintenance_orchestrator)
 - Do both `optimize_if_needed()` skip-tolerance messages include the target MB value?
 - Do both `vacuum_table()` copies enforce `retain_hours = max(retain_hours, 168)`?
@@ -89,7 +90,7 @@ Read ALL of the following files in full:
 
 **Structure:**
 - Every notebook has a `# ## Validation` markdown cell before its validation code cell?
-- Parameters in PARAMETERS CELL match parameters markdown table for all six notebooks (no extras, no missing)?
+- Parameters in PARAMETERS CELL match parameters markdown table for all seven notebooks (no extras, no missing)?
 
 **Other:**
 - Any contradictions between a notebook header and its actual code?

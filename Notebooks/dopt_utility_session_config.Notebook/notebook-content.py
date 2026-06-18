@@ -14,9 +14,10 @@
 # # dopt_utility_session_config
 # ## Purpose
 # Sets the Spark session configuration baseline for a given medallion layer.
-# Call this notebook at the top of every pipeline notebook using `mssparkutils.notebook.run()`
-# or `%run`. It establishes a consistent, known configuration regardless of workspace
-# defaults - which vary by workspace age and history.
+# Call this notebook at the top of every pipeline notebook using
+# `mssparkutils.notebook.run("dopt_utility_session_config")` or
+# `%run dopt_utility_session_config`. It establishes a consistent, known configuration
+# regardless of workspace defaults - which vary by workspace age and history.
 # ## What it does
 # - Applies the full session baseline (Auto-Compaction, ATFS, Fast Optimize, File Level
 #   Compaction Target, Optimize Write, V-Order)
@@ -28,10 +29,17 @@
 # - **Gold**: baseline + V-Order enabled (consumer-facing; Direct Lake and SQL Endpoint reads benefit)
 # - **Custom**: baseline applied, then `custom_optimize_write` and `custom_v_order` parameter values
 #   override the defaults. Use for architectures that do not follow Bronze / Silver / Gold.
+# ## Custom mode
+# Pass `layer = "custom"` for notebooks that do not follow a standard medallion layer.
+# The full baseline is applied first, then `custom_optimize_write` and `custom_v_order`
+# override the defaults explicitly. Both parameters must be `"true"` or `"false"` — the
+# notebook raises a `ValueError` at startup if either is missing or invalid.
 # ## Note on Optimize Write at Bronze
 # The Bronze override disables Optimize Write for the common append-only batch ingestion case.
-# If your Bronze notebook uses MERGE, UPDATE, or DELETE, re-enable it after calling this notebook:
-# `spark.conf.set("spark.databricks.delta.optimizeWrite.enabled", "true")`
+# If your Bronze ingestion pattern always uses MERGE, UPDATE, or DELETE, call this notebook
+# with `layer = "custom"` and `custom_optimize_write = "true"` instead. Custom mode applies
+# the full baseline and then explicitly enables Optimize Write — a permanent, documented
+# configuration rather than a per-notebook override after the call.
 
 
 # PARAMETERS CELL ********************
