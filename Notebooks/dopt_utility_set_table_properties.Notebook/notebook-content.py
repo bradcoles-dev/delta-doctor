@@ -83,10 +83,10 @@ layer          = "silver"  # Medallion layer: "bronze", "silver", "gold", or "cu
 cluster_by     = ""        # Comma-separated cluster key columns, e.g. "customer_id, order_date". "" to skip
 
 # Custom mode parameters — only used when layer = "custom". "" to skip a property.
-custom_deletion_vectors   = "true"   # delta.enableDeletionVectors
-custom_auto_compact       = "true"   # delta.autoOptimize.autoCompact
-custom_optimize_write     = "true"   # delta.autoOptimize.optimizeWrite
-custom_v_order            = "false"  # delta.parquet.vorder.enabled
+custom_deletion_vectors   = ""   # delta.enableDeletionVectors: "true", "false", or "" to skip
+custom_auto_compact       = ""   # delta.autoOptimize.autoCompact: "true", "false", or "" to skip
+custom_optimize_write     = ""   # delta.autoOptimize.optimizeWrite: "true", "false", or "" to skip
+custom_v_order            = ""   # delta.parquet.vorder.enabled: "true", "false", or "" to skip
 custom_target_file_size_mb = 0       # delta.targetFileSize in MB; 0 to skip
 
 # METADATA ********************
