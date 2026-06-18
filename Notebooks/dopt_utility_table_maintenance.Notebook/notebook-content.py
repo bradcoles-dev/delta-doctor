@@ -45,11 +45,12 @@
 # These values are overridden at runtime by the Fabric pipeline.
 # Default values below are used when running the notebook interactively.
 
-lakehouse_guid = ""     # The GUID of the Lakehouse containing the target table
-table_name     = ""     # The table name (without schema prefix), e.g. "fact_sales"
-schema_name    = ""     # Schema name for schema-enabled Lakehouses. Leave empty for non-schema Lakehouses
-target_mb      = 400    # Target average file size in MB — 256 for Silver, 400 for Gold
-force_vacuum   = False  # Set True in the pipeline to trigger VACUUM outside the weekly schedule
+lakehouse_guid   = ""        # The GUID of the Lakehouse containing the target table
+table_name       = ""        # The table name (without schema prefix), e.g. "fact_sales"
+schema_name      = ""        # Schema name for schema-enabled Lakehouses. Leave empty for non-schema Lakehouses
+layer            = "silver"  # Medallion layer: "bronze", "silver", "gold", or "custom"
+custom_target_mb = 0         # Custom mode only: target file size in MB for OPTIMIZE gating. Required when layer = "custom"
+force_vacuum     = False     # Set True in the pipeline to trigger VACUUM outside the weekly schedule
 
 # METADATA ********************
 
@@ -66,7 +67,8 @@ force_vacuum   = False  # Set True in the pipeline to trigger VACUUM outside the
 # | `lakehouse_guid` | string | The GUID of the Lakehouse containing the target table. Found in the Lakehouse URL in the Fabric portal |
 # | `table_name` | string | The name of the table to maintain, without schema prefix (e.g. `fact_sales`) |
 # | `schema_name` | string | Schema name for schema-enabled Lakehouses (e.g. `silver`). Leave empty for Lakehouses without schemas |
-# | `target_mb` | integer | Target average Parquet file size in MB. Use **256** for Silver, **400** for Gold |
+# | `layer` | string | Medallion layer for the table. Accepts `"bronze"`, `"silver"`, `"gold"`, or `"custom"`. Default: `"silver"` |
+# | `custom_target_mb` | integer | **Custom mode only.** Target file size in MB for OPTIMIZE gating. Required when `layer = "custom"` |
 # | `force_vacuum` | boolean | When `True`, VACUUM runs regardless of the day of the week. Use for ad-hoc runs after large backfills or initial loads. Default: `False` |
 # # ### Why different targets per layer?
 # - **Silver (256 MB):** Intermediate layer — balances write and read performance for Spark processing
@@ -91,11 +93,26 @@ force_vacuum   = False  # Set True in the pipeline to trigger VACUUM outside the
 
 # ── Validation ────────────────────────────────────────────────────────────────
 
+valid_layers  = {"bronze", "silver", "gold", "custom"}
+LAYER_TARGETS = {"bronze": 128, "silver": 256, "gold": 400}
+
 if not lakehouse_guid:
     raise ValueError("Parameter 'lakehouse_guid' is required but was not provided.")
 
 if not table_name:
     raise ValueError("Parameter 'table_name' is required but was not provided.")
+
+if not layer or layer.lower() not in valid_layers:
+    raise ValueError(f"Parameter 'layer' must be one of: {', '.join(sorted(valid_layers))}. Got: '{layer}'")
+
+layer = layer.lower()
+
+if layer == "custom":
+    if not custom_target_mb or custom_target_mb <= 0:
+        raise ValueError("Parameter 'custom_target_mb' must be a positive integer when layer = 'custom'.")
+    target_mb = custom_target_mb
+else:
+    target_mb = LAYER_TARGETS[layer]
 
 workspace_guid = mssparkutils.env.getWorkspaceId()
 onelake_base   = f"abfss://{workspace_guid}@onelake.dfs.fabric.microsoft.com/{lakehouse_guid}/Tables"
@@ -103,6 +120,7 @@ table_path     = f"{onelake_base}/{schema_name}/{table_name}" if schema_name els
 display_name   = f"{schema_name}.{table_name}" if schema_name else table_name
 
 print(f"Target table    : {display_name}")
+print(f"Layer           : {layer}")
 print(f"Target file size: {target_mb} MB")
 print(f"Force VACUUM    : {force_vacuum}")
 
@@ -204,6 +222,7 @@ def vacuum_table(table_path, display_name, retain_hours=168):
         if VACUUM removes files from that version before the model re-frames,
         users will encounter query errors.
     """
+    retain_hours = max(retain_hours, 168)  # 7-day minimum — enforced in code, not just documented
     spark.sql(f"VACUUM '{table_path}' RETAIN {retain_hours} HOURS")
     print(f"{display_name}: VACUUM ran — retained {retain_hours}h")
 

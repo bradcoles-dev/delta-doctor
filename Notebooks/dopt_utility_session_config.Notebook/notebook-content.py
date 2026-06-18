@@ -43,8 +43,8 @@
 layer = "silver"    # Medallion layer: "bronze", "silver", "gold", or "custom"
 
 # Custom mode parameters — only used when layer = "custom"
-custom_optimize_write = True   # spark.databricks.delta.optimizeWrite.enabled
-custom_v_order        = False  # spark.sql.parquet.vorder.default
+custom_optimize_write = "true"   # spark.databricks.delta.optimizeWrite.enabled: "true" or "false"
+custom_v_order        = "false"  # spark.sql.parquet.vorder.default: "true" or "false"
 
 # METADATA ********************
 
@@ -59,8 +59,8 @@ custom_v_order        = False  # spark.sql.parquet.vorder.default
 # | Parameter | Type | Description |
 # |---|---|---|
 # | `layer` | string | Accepts `"bronze"`, `"silver"`, `"gold"`, or `"custom"`. Default: `"silver"` |
-# | `custom_optimize_write` | boolean | **Custom mode only.** Sets `optimizeWrite.enabled`. Default: `True` |
-# | `custom_v_order` | boolean | **Custom mode only.** Sets `vorder.default`. Default: `False` |
+# | `custom_optimize_write` | string | **Custom mode only.** Sets `optimizeWrite.enabled`. Accepts `"true"` or `"false"`. Default: `"true"` |
+# | `custom_v_order` | string | **Custom mode only.** Sets `vorder.default`. Accepts `"true"` or `"false"`. Default: `"false"` |
 
 
 # MARKDOWN ********************
@@ -73,11 +73,19 @@ custom_v_order        = False  # spark.sql.parquet.vorder.default
 # ── Validation ────────────────────────────────────────────────────────────────
 
 valid_layers = {"bronze", "silver", "gold", "custom"}
+valid_bool   = {"true", "false"}
 
 if not layer or layer.lower() not in valid_layers:
     raise ValueError(f"Parameter 'layer' must be one of: {', '.join(sorted(valid_layers))}. Got: '{layer}'")
 
 layer = layer.lower()
+
+if layer == "custom":
+    if str(custom_optimize_write).lower() not in valid_bool:
+        raise ValueError(f"Parameter 'custom_optimize_write' must be 'true' or 'false'. Got: '{custom_optimize_write}'")
+    if str(custom_v_order).lower() not in valid_bool:
+        raise ValueError(f"Parameter 'custom_v_order' must be 'true' or 'false'. Got: '{custom_v_order}'")
+
 print(f"Layer: {layer}")
 
 # METADATA ********************

@@ -50,9 +50,9 @@
 # These values are overridden at runtime by the Fabric pipeline.
 # Default values below are used when running the notebook interactively.
 
-lakehouse_guid = ""     # The GUID of the Lakehouse to maintain
-target_mb      = 400    # Target average file size in MB — 256 for Silver, 400 for Gold
-force_vacuum   = False  # Set True to trigger VACUUM regardless of day of week
+lakehouse_guid = ""        # The GUID of the Lakehouse to maintain
+layer          = "silver"  # Medallion layer: "bronze", "silver", or "gold"
+force_vacuum   = False     # Set True to trigger VACUUM regardless of day of week
 
 # METADATA ********************
 
@@ -67,7 +67,7 @@ force_vacuum   = False  # Set True to trigger VACUUM regardless of day of week
 # | Parameter | Type | Description |
 # |---|---|---|
 # | `lakehouse_guid` | string | The GUID of the Lakehouse to maintain. Found in the Lakehouse URL in the Fabric portal |
-# | `target_mb` | integer | Target average Parquet file size in MB. Use **256** for Silver, **400** for Gold |
+# | `layer` | string | Medallion layer for all tables in this Lakehouse. Accepts `"bronze"`, `"silver"`, or `"gold"`. `"custom"` is not supported — all tables in a Lakehouse share the same layer. Default: `"silver"` |
 # | `force_vacuum` | boolean | When `True`, VACUUM runs on all tables regardless of day. Use after large backfills or initial loads. Default: `False` |
 
 
@@ -80,12 +80,22 @@ force_vacuum   = False  # Set True to trigger VACUUM regardless of day of week
 
 # ── Validation ────────────────────────────────────────────────────────────────
 
+valid_layers  = {"bronze", "silver", "gold"}
+LAYER_TARGETS = {"bronze": 128, "silver": 256, "gold": 400}
+
 if not lakehouse_guid:
     raise ValueError("Parameter 'lakehouse_guid' is required but was not provided.")
+
+if not layer or layer.lower() not in valid_layers:
+    raise ValueError(f"Parameter 'layer' must be one of: {', '.join(sorted(valid_layers))}. Got: '{layer}'")
+
+layer     = layer.lower()
+target_mb = LAYER_TARGETS[layer]
 
 workspace_guid = mssparkutils.env.getWorkspaceId()
 
 print(f"Lakehouse       : {lakehouse_guid}")
+print(f"Layer           : {layer}")
 print(f"Target file size: {target_mb} MB")
 print(f"Force VACUUM    : {force_vacuum}")
 
@@ -188,6 +198,7 @@ def vacuum_table(table_path, display_name, retain_hours=168):
     Runs VACUUM on a Delta table. Never runs below 168 hours (7 days) — the minimum
     safe retention to protect concurrent readers and Direct Lake framing.
     """
+    retain_hours = max(retain_hours, 168)  # 7-day minimum — enforced in code, not just documented
     spark.sql(f"VACUUM '{table_path}' RETAIN {retain_hours} HOURS")
     print(f"  {display_name}: VACUUM ran — retained {retain_hours}h")
 

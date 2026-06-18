@@ -48,7 +48,7 @@
 # Default values below are used when running the notebook interactively.
 
 lakehouse_guid = ""        # The GUID of the Lakehouse to configure
-layer          = "silver"  # Medallion layer: "bronze", "silver", or "gold"
+layer          = "silver"  # Medallion layer: "bronze", "silver", or "gold". "custom" is not supported — use dopt_utility_set_table_properties directly for tables requiring non-standard configuration
 
 # METADATA ********************
 
@@ -63,7 +63,7 @@ layer          = "silver"  # Medallion layer: "bronze", "silver", or "gold"
 # | Parameter | Type | Description |
 # |---|---|---|
 # | `lakehouse_guid` | string | The GUID of the Lakehouse to configure. Found in the Lakehouse URL in the Fabric portal |
-# | `layer` | string | The medallion layer for all tables in this Lakehouse. Accepts `"bronze"`, `"silver"`, or `"gold"`. Default: `"silver"` |
+# | `layer` | string | The medallion layer for all tables in this Lakehouse. Accepts `"bronze"`, `"silver"`, or `"gold"`. `"custom"` is not supported — use `dopt_utility_set_table_properties` directly for tables requiring non-standard configuration. Default: `"silver"` |
 
 
 # MARKDOWN ********************

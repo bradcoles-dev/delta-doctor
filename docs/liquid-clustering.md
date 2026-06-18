@@ -43,25 +43,25 @@ Source: confirmed by Miles Cole (Principal PM, Microsoft), 2026-05-20. The Datab
 
 **Using delta-optimizer:** Pass the `cluster_by` parameter to `dopt_utility_set_table_properties` as a comma-separated list of column names (e.g. `"customer_id, event_date"`). The notebook runs `ALTER TABLE ... CLUSTER BY (...)` and prints a reminder that clustering is applied physically on the next OPTIMIZE run. Leave `cluster_by` empty to skip — cluster key selection is a per-table decision and is not applied by `dopt_utility_set_properties_orchestrator`.
 
-**Manually via SQL:**
+**Manually via SQL:** (`{table_path}` = `abfss://{workspace_guid}@onelake.dfs.fabric.microsoft.com/{lakehouse_guid}/Tables/{table_name}`)
 
 ```sql
 -- On a new table
-CREATE TABLE my_catalog.gold.my_table
+CREATE TABLE delta.`{table_path}`
 (id INT, customer_id INT, event_date DATE, amount DECIMAL(10,2))
 CLUSTER BY (customer_id, event_date);
 ```
 
 ```sql
 -- On an existing table
-ALTER TABLE my_catalog.gold.my_table
+ALTER TABLE delta.`{table_path}`
 CLUSTER BY (customer_id, event_date);
 ```
 
 Note: enabling on an existing table does not immediately recluster existing data. Run `OPTIMIZE` to apply clustering to existing files:
 
 ```sql
-OPTIMIZE my_catalog.gold.my_table;
+OPTIMIZE '{table_path}';
 ```
 
 ## When to Use Liquid Clustering

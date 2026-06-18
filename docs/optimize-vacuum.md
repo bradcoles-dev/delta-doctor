@@ -48,100 +48,51 @@ Rather than scheduling OPTIMIZE as a separate job, the recommended pattern is to
 Not every table needs OPTIMIZE every run. Dimension tables, master data, and lookup tables may rarely change, making a daily OPTIMIZE run wasteful. The right gate is **average file size vs target** — only run OPTIMIZE if files are meaningfully below the target for your consumption layer.
 
 ```python
-def optimize_if_needed(table_name, target_mb=400, tolerance=0.8):
-    details = spark.sql(f"DESCRIBE DETAIL {table_name}").collect()[0]
+def optimize_if_needed(table_path, target_mb=400, tolerance=0.8):
+    details = spark.sql(f"DESCRIBE DETAIL '{table_path}'").collect()[0]
     num_files = details['numFiles']
 
     if num_files == 0:
-        print(f"{table_name}: skipped — no files")
+        print(f"{table_path}: skipped — no files")
         return
 
     avg_file_size_mb = (details['sizeInBytes'] / num_files) / (1024**2)
     threshold_mb = target_mb * tolerance  # only act if avg is below 80% of target
 
     if avg_file_size_mb < threshold_mb:
-        spark.sql(f"OPTIMIZE {table_name}")
-        print(f"{table_name}: OPTIMIZE ran — avg file size was {avg_file_size_mb:.0f}MB (target {target_mb}MB)")
+        spark.sql(f"OPTIMIZE '{table_path}'")
+        print(f"{table_path}: OPTIMIZE ran — avg file size was {avg_file_size_mb:.0f}MB (target {target_mb}MB)")
     else:
-        print(f"{table_name}: skipped — avg file size {avg_file_size_mb:.0f}MB is within tolerance of {target_mb}MB target")
+        print(f"{table_path}: skipped — avg file size {avg_file_size_mb:.0f}MB is within tolerance of {target_mb}MB target")
 ```
 
-Rather than hardcoding individual table names, iterate over schemas dynamically so new tables are picked up automatically:
-
-```python
-from datetime import datetime
-
-def optimize_if_needed(table_name, target_mb=400, tolerance=0.8):
-    details = spark.sql(f"DESCRIBE DETAIL {table_name}").collect()[0]
-    num_files = details['numFiles']
-
-    if num_files == 0:
-        print(f"{table_name}: skipped — no files")
-        return
-
-    avg_file_size_mb = (details['sizeInBytes'] / num_files) / (1024**2)
-    threshold_mb = target_mb * tolerance
-
-    if avg_file_size_mb < threshold_mb:
-        spark.sql(f"OPTIMIZE {table_name}")
-        print(f"{table_name}: OPTIMIZE ran — avg file size was {avg_file_size_mb:.0f}MB (target {target_mb}MB)")
-    else:
-        print(f"{table_name}: skipped — avg file size {avg_file_size_mb:.0f}MB is within tolerance of {target_mb}MB target")
-
-def vacuum_table(table_name, retain_hours=168):
-    spark.sql(f"VACUUM {table_name} RETAIN {retain_hours} HOURS")
-    print(f"{table_name}: VACUUM ran — retained {retain_hours}h")
-
-
-# Layer config — add schemas here as they grow
-layer_config = [
-    {"schema": "my_catalog.silver", "target_mb": 256},
-    {"schema": "my_catalog.gold",   "target_mb": 400},
-]
-
-# OPTIMIZE — runs on every pipeline execution
-for layer in layer_config:
-    tables = spark.sql(f"SHOW TABLES IN {layer['schema']}").collect()
-    for table in tables:
-        full_name = f"{layer['schema']}.{table['tableName']}"
-        optimize_if_needed(full_name, target_mb=layer['target_mb'])
-
-# VACUUM — runs weekly (Sunday only)
-if datetime.today().weekday() == 6:
-    for layer in layer_config:
-        tables = spark.sql(f"SHOW TABLES IN {layer['schema']}").collect()
-        for table in tables:
-            vacuum_table(f"{layer['schema']}.{table['tableName']}")
-```
-
-**Why this works:**
-- `optimize_if_needed` gates on average file size vs target — dimension/lookup tables that rarely change will consistently skip
-- VACUUM runs weekly rather than daily — sufficient to reclaim space while respecting the 7-day retention window
-- Adding a new table to Silver or Gold requires no notebook changes
+To run OPTIMIZE and VACUUM across all tables in a Lakehouse, use `dopt_utility_maintenance_orchestrator`. It enumerates tables via `mssparkutils.fs.ls()` with `_delta_log` detection — no `SHOW TABLES` required, and handles both schema-enabled and non-schema Lakehouses automatically.
 
 **Notes:**
 - For Gold tables serving Direct Lake, ensure this notebook completes before your Power BI dataset refresh so deletion vectors are cleared and liquid clustering is applied before Direct Lake frames the latest commit
 - VACUUM on Gold tables: confirm the semantic model has been re-framed to the current Delta version before the weekly run to avoid Direct Lake query errors
 - Fast Optimize handles bin-level evaluation within each OPTIMIZE run — the average file size check gates whether to start the command at all; they are complementary
 
+> **Path syntax in Fabric:** SQL statements reference Delta tables via ABFSS path. Use `'{table_path}'` for OPTIMIZE and VACUUM, and `delta.\`{table_path}\`` for ALTER TABLE and DESCRIBE statements, where `{table_path}` is the full ABFSS path: `abfss://{workspace_guid}@onelake.dfs.fabric.microsoft.com/{lakehouse_guid}/Tables/{table_name}`.
+
 ### DRY RUN
 
 For ad hoc checks or before large backfills, use `DRY RUN` to see what would be compacted without making changes:
 
 ```sql
-OPTIMIZE my_catalog.silver.my_table DRY RUN;
+OPTIMIZE '{table_path}' DRY RUN;
 ```
 
 ### Basic OPTIMIZE
 
 ```sql
-OPTIMIZE my_catalog.gold.my_table;
+OPTIMIZE '{table_path}';
 ```
 
 ### OPTIMIZE with V-Order (Gold / Direct Lake tables)
 
 ```sql
-OPTIMIZE my_catalog.gold.my_table VORDER;
+OPTIMIZE '{table_path}' VORDER;
 ```
 
 ### OPTIMIZE with Z-Order
@@ -149,7 +100,7 @@ OPTIMIZE my_catalog.gold.my_table VORDER;
 Use when queries frequently filter on specific columns and the table does not use Liquid Clustering:
 
 ```sql
-OPTIMIZE my_catalog.gold.my_table ZORDER BY (customer_id, event_date);
+OPTIMIZE '{table_path}' ZORDER BY (customer_id, event_date);
 ```
 
 Note: Z-Order and Liquid Clustering are mutually exclusive. Prefer Liquid Clustering for new tables.
@@ -171,7 +122,7 @@ As of March 2026, the Native Execution Engine has native support for both Z-Orde
 ### Table history
 
 ```sql
-DESCRIBE HISTORY my_catalog.gold.my_table;
+DESCRIBE HISTORY delta.`{table_path}`;
 ```
 
 Auto-compaction runs appear as `OPTIMIZE` with `auto=true` in `operationParameters`.
@@ -196,7 +147,7 @@ spark.conf.set("spark.databricks.delta.retentionDurationCheck.enabled", "true")
 ```
 
 ```sql
-VACUUM my_catalog.silver.my_table RETAIN 168 HOURS;
+VACUUM '{table_path}' RETAIN 168 HOURS;
 ```
 
 ### Recommended VACUUM Cadence
@@ -214,13 +165,13 @@ VACUUM my_catalog.silver.my_table RETAIN 168 HOURS;
 3. Run `DESCRIBE HISTORY` to understand recent activity:
 
 ```sql
-DESCRIBE HISTORY my_catalog.gold.my_table;
+DESCRIBE HISTORY delta.`{table_path}`;
 ```
 
 ### DRY RUN
 
 ```sql
-VACUUM my_catalog.silver.my_table RETAIN 168 HOURS DRY RUN;
+VACUUM '{table_path}' RETAIN 168 HOURS DRY RUN;
 ```
 
 Returns the list of files that would be deleted without removing anything.

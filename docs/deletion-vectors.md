@@ -45,7 +45,7 @@ For tables with deletion vectors, the VACUUM flow is:
 `REORG TABLE ... APPLY (PURGE)` is the more targeted option — it rewrites **only** files that contain deletion vectors, rather than running a full compaction pass:
 
 ```sql
-REORG TABLE my_catalog.silver.my_table APPLY (PURGE);
+REORG TABLE delta.`{table_path}` APPLY (PURGE);
 ```
 
 After running this, note the completion timestamp — that is the reference point for your VACUUM retention window.
@@ -54,15 +54,15 @@ After running this, note the completion timestamp — that is the reference poin
 
 **Using delta-optimizer:** Pass `lakehouse_guid`, `table_name`, and `layer` to `dopt_utility_set_table_properties`. Deletion vectors are enabled by default for all layers. Run `dopt_utility_set_properties_orchestrator` to enable across all tables in a Lakehouse at once.
 
-**Manually via SQL:**
+**Manually via SQL:** (`{table_path}` = `abfss://{workspace_guid}@onelake.dfs.fabric.microsoft.com/{lakehouse_guid}/Tables/{table_name}`)
 
 ```sql
 -- On a new table
-CREATE TABLE my_catalog.silver.my_table (...)
+CREATE TABLE delta.`{table_path}` (...)
 TBLPROPERTIES ('delta.enableDeletionVectors' = true);
 
 -- On an existing table
-ALTER TABLE my_catalog.silver.my_table
+ALTER TABLE delta.`{table_path}`
 SET TBLPROPERTIES ('delta.enableDeletionVectors' = true);
 ```
 

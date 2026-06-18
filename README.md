@@ -82,8 +82,8 @@ Session configs apply only to the current notebook session. For tables written b
 3. Start with `dopt_utility_table_health` — pass `lakehouse_guid` as a parameter and run it to see the current state of your tables before changing anything
 4. Run `dopt_utility_set_properties_orchestrator` once per Lakehouse to set the correct Delta table properties for every table. Pass the `lakehouse_guid` and the `layer` for that Lakehouse
 5. Run `dopt_utility_maintenance_orchestrator` to compact small files and reclaim storage across all tables. On a previously unmaintained Lakehouse the first run will take longer than subsequent runs — expect at least minutes per table depending on size and fragmentation. Monitor progress in the Spark UI. Subsequent runs cost almost nothing when tables are already healthy
-6. Wire `dopt_utility_table_maintenance` as the final activity in each pipeline going forward, passing `lakehouse_guid`, `table_name`, `target_mb`, and `force_vacuum` as parameters
-7. Add a call to `dopt_utility_session_config` at the top of each pipeline notebook, passing the layer as a parameter
+6. Add a call to `dopt_utility_session_config` at the top of each pipeline notebook, passing the layer as a parameter
+7. Wire `dopt_utility_table_maintenance` as the final activity in each pipeline going forward, passing `lakehouse_guid`, `table_name`, `schema_name`, `layer`, and `force_vacuum` as parameters
 
 Detailed setup guides are in [`/docs`](./docs/).
 
