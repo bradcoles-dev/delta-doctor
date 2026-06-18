@@ -12,27 +12,23 @@
 # MARKDOWN ********************
 
 # # dopt_utility_maintenance_orchestrator
-#
-# ## Purpose
+# # ## Purpose
 # Iterates all tables in a Lakehouse and runs OPTIMIZE (if needed) and VACUUM (weekly or
 # forced) on each. Designed to be scheduled as a standalone pipeline, or used as a
 # starting point before per-table pipeline calls are in place.
-#
-# ## What it does
+# # ## What it does
 # - Lists all tables in the Lakehouse via `SHOW TABLES`
 # - Runs OPTIMIZE on every table whose average file size is below the target threshold —
 #   healthy tables are skipped automatically
 # - Runs VACUUM on Sundays (or immediately if `force_vacuum = True`)
 # - Catches and logs errors per table — one failing table does not stop the run
 # - Prints a summary of tables optimized, skipped, vacuumed, and errored
-#
-# ## When to use this vs dopt_utility_table_maintenance
+# # ## When to use this vs dopt_utility_table_maintenance
 # Use this orchestrator when you want Lakehouse-wide coverage in a single pipeline step.
 # Once pipelines are mature, prefer calling `dopt_utility_table_maintenance` as the final
 # step of each individual pipeline load — that ties maintenance to the natural cadence of
 # each table's data changes, and avoids running across the whole Lakehouse every time.
-#
-# ## Prerequisites
+# # ## Prerequisites
 # - This notebook must be called from a Fabric pipeline via the Notebook activity
 # - The Lakehouse GUID must be passed as a parameter
 # - For Gold tables serving Power BI Direct Lake: ensure this notebook completes **before**
@@ -59,8 +55,7 @@ force_vacuum   = False  # Set True to trigger VACUUM regardless of day of week
 # MARKDOWN ********************
 
 # ## Parameters
-#
-# | Parameter | Type | Description |
+# # | Parameter | Type | Description |
 # |---|---|---|
 # | `lakehouse_guid` | string | The GUID of the Lakehouse to maintain. Found in the Lakehouse URL in the Fabric portal |
 # | `target_mb` | integer | Target average Parquet file size in MB. Use **256** for Silver, **400** for Gold |
@@ -93,8 +88,7 @@ print(f"Force VACUUM    : {force_vacuum}")
 # MARKDOWN ********************
 
 # ## Functions
-#
-# Two functions are defined below. They are called in the orchestration cell — do not
+# # Two functions are defined below. They are called in the orchestration cell — do not
 # modify the function definitions unless you intend to change the maintenance logic globally.
 
 
@@ -146,8 +140,7 @@ def vacuum_table(fully_qualified_name, retain_hours=168):
 # MARKDOWN ********************
 
 # ## Orchestration
-#
-# Iterates all tables in the Lakehouse. OPTIMIZE runs on every table that needs it.
+# # Iterates all tables in the Lakehouse. OPTIMIZE runs on every table that needs it.
 # VACUUM runs on Sundays or when `force_vacuum = True`.
 # Errors on individual tables are caught and logged — the run continues regardless.
 
