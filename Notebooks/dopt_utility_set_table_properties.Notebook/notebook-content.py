@@ -12,18 +12,15 @@
 # MARKDOWN ********************
 
 # # dopt_utility_set_table_properties
-#
-# ## Purpose
+# # ## Purpose
 # Sets Delta table properties on a single table. These properties persist across Spark
 # sessions and apply regardless of which notebook or pipeline writes the table — making
 # them more reliable than session-level configs for tables with multiple writers.
-#
-# ## What it does
+# # ## What it does
 # - Sets any combination of the five configurable table properties
 # - Skips any property where the parameter is left empty (or zero for file size)
 # - Prints a clear log of every property set and its value
-#
-# ## When to use this
+# # ## When to use this
 # - **Deletion vectors**: enable on any table with frequent MERGE, UPDATE, or DELETE
 # - **Auto-Compaction / Optimize Write at table level**: use instead of session configs
 #   when multiple notebooks or pipelines write to the same table
@@ -31,8 +28,7 @@
 #   the SQL Analytics Endpoint
 # - **Target file size**: override ATFS for a specific table (e.g. lock a Gold table
 #   to 400 MB regardless of how large the table grows)
-#
-# ## Warning — deletion vectors upgrade the table protocol
+# # ## Warning — deletion vectors upgrade the table protocol
 # Enabling deletion vectors upgrades the Delta table reader/writer protocol. The table
 # will not be readable by clients that do not support deletion vectors. Verify client
 # compatibility before enabling on a table that is read by external tools or connectors.
@@ -67,8 +63,7 @@ target_file_size_mb = 0        # delta.targetFileSize            — positive in
 # MARKDOWN ********************
 
 # ## Parameters
-#
-# | Parameter | Type | Default | Description |
+# # | Parameter | Type | Default | Description |
 # |---|---|---|---|
 # | `lakehouse_guid` | string | — | The GUID of the Lakehouse. Found in the Lakehouse URL in the Fabric portal |
 # | `table_name` | string | — | Table name without schema prefix (e.g. `fact_sales`) |
@@ -77,14 +72,12 @@ target_file_size_mb = 0        # delta.targetFileSize            — positive in
 # | `optimize_write` | string | `""` | Sets `delta.autoOptimize.optimizeWrite`. Pass `""` to skip |
 # | `v_order` | string | `""` | Sets `delta.parquet.vorder.enabled`. Pass `""` to skip |
 # | `target_file_size_mb` | integer | `0` | Sets `delta.targetFileSize` in MB (e.g. `400`). Pass `0` to skip |
-#
-# ### Why empty string means skip
+# # ### Why empty string means skip
 # Fabric pipeline parameters are always passed — there is no way to omit one entirely.
 # Empty string is used as a sentinel value meaning "do not change this property."
 # This allows the notebook to be called with only the properties you intend to change,
 # leaving everything else untouched.
-#
-# ### Default values
+# # ### Default values
 # `deletion_vectors` and `auto_compact` default to `"true"` because they are safe to
 # enable on almost all tables and are the most common reason to call this notebook.
 # `optimize_write`, `v_order`, and `target_file_size_mb` default to skip because their
@@ -133,8 +126,7 @@ print(f"Target table: {fully_qualified_name}")
 # MARKDOWN ********************
 
 # ## Set Table Properties
-#
-# Builds the `ALTER TABLE SET TBLPROPERTIES` statement from the parameters provided.
+# # Builds the `ALTER TABLE SET TBLPROPERTIES` statement from the parameters provided.
 # Properties with empty string or zero values are skipped entirely — the table's
 # existing value for those properties is left unchanged.
 
