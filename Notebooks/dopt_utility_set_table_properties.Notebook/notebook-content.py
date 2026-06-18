@@ -12,22 +12,18 @@
 # MARKDOWN ********************
 
 # # dopt_utility_set_table_properties
-#
 # ## Purpose
 # Sets Delta table properties on a single table based on its medallion layer. These
 # properties persist across Spark sessions and apply regardless of which notebook or
 # pipeline writes the table — making them more reliable than session-level configs for
 # tables with multiple writers.
-#
 # ## What it does
 # - Applies the correct set of Delta table properties for the given layer in a single
 #   `ALTER TABLE SET TBLPROPERTIES` call
 # - Logs each property set and its value
-#
 # ## When to use this
 # Run once per table at setup time, or call from an onboarding pipeline when a new table
 # is added to the Lakehouse. It is not intended to run on every pipeline execution.
-#
 # ## Layer behaviour
 # | Property | Bronze | Silver | Gold |
 # |---|---|---|---|
@@ -35,7 +31,6 @@
 # | `delta.autoOptimize.autoCompact` | `true` | `true` | `true` |
 # | `delta.autoOptimize.optimizeWrite` | `false` | `true` | `true` |
 # | `delta.parquet.vorder.enabled` | `false` | `false` | `true` |
-#
 # The logic mirrors `dopt_utility_session_config`:
 # - **Bronze**: `optimizeWrite` is disabled — append-only batch loads do not benefit from
 #   the shuffle that optimize write introduces
@@ -43,13 +38,11 @@
 #   Spark notebooks, not directly by Power BI
 # - **Gold**: V-Order enabled — consumer-facing tables served via Direct Lake or the SQL
 #   Analytics Endpoint benefit from the write-time Parquet encoding
-#
 # ## Silver tables that feed Direct Lake directly
 # If a Silver table is consumed directly by Power BI Direct Lake (skipping a Gold layer),
 # call this notebook with `layer = "gold"` for that table. The Gold configuration is correct
 # for any table that is the terminal layer for Direct Lake or SQL Endpoint consumers —
 # regardless of what it is named.
-#
 # ## Warning — deletion vectors upgrade the table protocol
 # Enabling deletion vectors upgrades the Delta table reader/writer protocol. The table will
 # not be readable by clients that do not support deletion vectors. Verify client compatibility
@@ -119,7 +112,6 @@ print(f"Layer       : {layer}")
 # MARKDOWN ********************
 
 # ## Set Table Properties
-#
 # Builds and executes the `ALTER TABLE SET TBLPROPERTIES` statement for the given layer.
 # All four properties are set in a single DDL call.
 
