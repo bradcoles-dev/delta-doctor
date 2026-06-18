@@ -17,7 +17,7 @@ This affects any Fabric Lakehouse, regardless of how data gets in. Whether you w
 
 Delta table maintenance sits below the transformation layer — it applies to the tables themselves, not to whatever wrote them. If you use dbt-fabric, Dataflow Gen2, or Copy activity for your transformations, this library is still fully applicable. The one exception is Fabric Warehouse, which manages its own storage automatically.
 
-The design decisions behind the library — layer targets, ATFS behaviour, V-Order trade-offs, VACUUM retention — are covered in [Fabric Delta Table Maintenance](https://bradcoles.dev/blog/fabric-delta-table-maintenance.html).
+The design decisions behind the library — layer targets, ATFS behaviour, V-Order trade-offs, VACUUM retention — are covered in [Delta Table Maintenance in Microsoft Fabric: A 2026 Practitioner's Guide](https://bradcoles.dev/blog/fabric-delta-table-maintenance.html).
 
 The library is:
 
@@ -133,7 +133,7 @@ The architecture is a clean layer split: the Rayfin app handles the UI, API, and
 
 This library emerged from research published in:
 
-> **[Fabric Delta Table Maintenance](https://bradcoles.dev/blog/fabric-delta-table-maintenance.html)** — Brad Coles
+> **[Delta Table Maintenance in Microsoft Fabric: A 2026 Practitioner's Guide](https://bradcoles.dev/blog/fabric-delta-table-maintenance.html)** — Brad Coles
 
 The article covers the full theory — what Fabric does and does not automate, the right settings by medallion layer, liquid clustering vs partitioning, deletion vector management, and VACUUM retention decisions. This library is the engineering implementation of those recommendations.
 
