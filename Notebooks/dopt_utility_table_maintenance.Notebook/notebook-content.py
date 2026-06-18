@@ -12,26 +12,26 @@
 # MARKDOWN ********************
 
 # # dopt_utility_table_maintenance
-# # ## Purpose
+# ## Purpose
 # Performs Delta table maintenance (OPTIMIZE and VACUUM) on a single table, passed as a
 # parameter from the calling pipeline.
-# # This notebook is designed to run as the **final step of a data pipeline**, after the
+# This notebook is designed to run as the **final step of a data pipeline**, after the
 # ingestion or transformation notebook for a given table has completed. It is called from
 # a Fabric pipeline using the Notebook activity, with parameters passed at runtime.
-# # ## What it does
+# ## What it does
 # - **OPTIMIZE**: Compacts small Parquet files into larger, right-sized files.
 #   Only runs if the average file size is meaningfully below the target — tables with little
 #   or no recent change (e.g. dimension tables, lookup tables) are automatically skipped.
 # - **VACUUM**: Removes Parquet files no longer referenced by the Delta transaction log
 #   (orphaned files from previous writes, updates, and compaction runs). Runs weekly by
 #   default (Sundays), or on demand if forced via pipeline parameter.
-# # ## Why this matters
+# ## Why this matters
 # Microsoft Fabric capacity is billed by SKU tier, and each tier doubles in cost. Without
 # regular maintenance, Delta tables accumulate small files and unresolved soft-deletes,
 # causing queries to scan far more data than necessary. This silently inflates capacity
 # consumption over time — the difference between a well-maintained platform and a neglected
 # one can be the difference between your current SKU and the next one up.
-# # ## Prerequisites
+# ## Prerequisites
 # - This notebook must be called from a Fabric pipeline via the Notebook activity
 # - Parameters must be passed by the pipeline (see Parameters cell below)
 # - This notebook must reside in the same Fabric workspace as the target Lakehouse
@@ -62,7 +62,7 @@ force_vacuum     = False     # Set True in the pipeline to trigger VACUUM outsid
 # MARKDOWN ********************
 
 # ## Parameters
-# # | Parameter | Type | Description |
+# | Parameter | Type | Description |
 # |---|---|---|
 # | `lakehouse_guid` | string | The GUID of the Lakehouse containing the target table. Found in the Lakehouse URL in the Fabric portal |
 # | `table_name` | string | The name of the table to maintain, without schema prefix (e.g. `fact_sales`) |
@@ -70,11 +70,11 @@ force_vacuum     = False     # Set True in the pipeline to trigger VACUUM outsid
 # | `layer` | string | Medallion layer for the table. Accepts `"bronze"`, `"silver"`, `"gold"`, or `"custom"`. Default: `"silver"` |
 # | `custom_target_mb` | integer | **Custom mode only.** Target file size in MB for OPTIMIZE gating. Required when `layer = "custom"` |
 # | `force_vacuum` | boolean | When `True`, VACUUM runs regardless of the day of the week. Use for ad-hoc runs after large backfills or initial loads. Default: `False` |
-# # ### Why different targets per layer?
+# ### Why different targets per layer?
 # - **Silver (256 MB):** Intermediate layer — balances write and read performance for Spark processing
 # - **Gold (400 MB):** Consumption layer — the SQL Analytics Endpoint and Power BI Direct Lake
 #   perform best with files in the 400 MB–1 GB range. Larger files mean fewer files to scan per query.
-# # ### How to set parameters in the pipeline
+# ### How to set parameters in the pipeline
 # In the Fabric pipeline, add a Notebook activity pointing to this notebook. In the activity's
 # **Settings** tab, expand **Base parameters** and add each parameter with its runtime value.
 # The calling pipeline knows which table it has just loaded and which layer it belongs to —
@@ -84,7 +84,7 @@ force_vacuum     = False     # Set True in the pipeline to trigger VACUUM outsid
 # MARKDOWN ********************
 
 # ## Validation
-# # Confirms that required parameters have been provided before attempting any maintenance
+# Confirms that required parameters have been provided before attempting any maintenance
 # operations. If either `lakehouse_guid` or `table_name` is empty, the notebook exits early
 # with a clear error message rather than failing mid-execution.
 
@@ -134,7 +134,7 @@ print(f"Force VACUUM    : {force_vacuum}")
 # MARKDOWN ********************
 
 # ## Functions
-# # Two functions are defined below. They are called in later cells — do not modify the
+# Two functions are defined below. They are called in later cells — do not modify the
 # function definitions unless you intend to change the maintenance logic globally.
 
 # CELL ********************
@@ -240,18 +240,18 @@ def vacuum_table(table_path, display_name, retain_hours=168):
 # MARKDOWN ********************
 
 # ## OPTIMIZE
-# # Runs `optimize_if_needed` on the target table on every pipeline execution.
-# # The table is skipped automatically if its average file size is already within tolerance
+# Runs `optimize_if_needed` on the target table on every pipeline execution.
+# The table is skipped automatically if its average file size is already within tolerance
 # of the target — so tables with little recent change will not incur unnecessary compute.
-# # ### Why OPTIMIZE matters at Silver and Gold
+# ### Why OPTIMIZE matters at Silver and Gold
 # Auto-compaction (enabled in the session config notebook) handles fragmentation inline
 # after each write, but targets 128 MB files by default. Silver and Gold consumers need
 # larger files:
 # - SQL Analytics Endpoint: ~400 MB
 # - Power BI Direct Lake: 400 MB–1 GB with large row groups
-# # OPTIMIZE also physically applies Liquid Clustering — data is only clustered when OPTIMIZE
+# OPTIMIZE also physically applies Liquid Clustering — data is only clustered when OPTIMIZE
 # runs, not during writes. Without it, liquid clustering provides no file-skipping benefit.
-# # Finally, OPTIMIZE resolves deletion vectors (soft-deletes). For Gold tables serving Direct
+# Finally, OPTIMIZE resolves deletion vectors (soft-deletes). For Gold tables serving Direct
 # Lake, accumulated deletion vectors add overhead to cold-cache query loading.
 
 # CELL ********************
@@ -270,24 +270,24 @@ optimize_if_needed(table_path, display_name, target_mb=target_mb)
 # MARKDOWN ********************
 
 # ## VACUUM
-# # Removes Parquet files that are no longer referenced by the Delta transaction log —
+# Removes Parquet files that are no longer referenced by the Delta transaction log —
 # orphaned files left behind by previous writes, updates, deletes, and compaction runs.
 # These files are invisible to queries but consume OneLake storage.
-# # **Runs weekly by default (Sundays), or immediately if `force_vacuum = True`.**
-# # ### Why weekly and not daily?
+# **Runs weekly by default (Sundays), or immediately if `force_vacuum = True`.**
+# ### Why weekly and not daily?
 # Delta's minimum safe retention period is 7 days (168 hours). Running VACUUM daily would
 # remove files written up to 7 days ago — which may still be referenced by:
 # - Long-running Spark queries or pipelines that opened a snapshot earlier in the week
 # - Power BI Direct Lake models that have not yet re-framed to a newer Delta commit version
-# # A weekly cadence on Sundays ensures a full 7-day gap between runs, stays within the safe
+# A weekly cadence on Sundays ensures a full 7-day gap between runs, stays within the safe
 # retention window, and reclaims storage without risking data access errors.
-# # ### When to use force_vacuum = True
+# ### When to use force_vacuum = True
 # Set `force_vacuum = True` in the pipeline parameters to trigger VACUUM outside the weekly
 # schedule. Typical use cases:
 # - After a large historical backfill or initial data load
 # - After running `REORG TABLE ... APPLY (PURGE)` to explicitly resolve deletion vectors
 # - During platform decommission or table migration
-# # ### Direct Lake tables
+# ### Direct Lake tables
 # Ensure the Power BI semantic model has been refreshed before VACUUM runs. If VACUUM
 # removes files from the Delta version the model is still referencing, Direct Lake users
 # will encounter query errors until the next model refresh.

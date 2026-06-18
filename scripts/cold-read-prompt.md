@@ -43,7 +43,6 @@ Read ALL of the following files in full:
 
 ## Known non-issues — do NOT flag these
 
-- The `# # ##` prefix pattern in some markdown cells — confirmed renders correctly in Fabric
 - `list_delta_tables()` defined identically in three notebooks — intentional, documented in CLAUDE.md
 - The inner `except Exception: pass` in `list_delta_tables()` schema subfolder recursion — intentional silence for non-Delta directories
 - The `mssparkutils.notebook.run()` timeout of 120 seconds in `set_properties_orchestrator` — documented in the notebook header
