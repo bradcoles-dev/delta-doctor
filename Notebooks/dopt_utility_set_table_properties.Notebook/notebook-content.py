@@ -225,6 +225,13 @@ if props:
         print(f"  {k} = {v}")
 
 if cluster_by.strip():
+    detail = spark.sql(f"DESCRIBE DETAIL '{table_path}'").first()
+    if detail.partitionColumns:
+        raise ValueError(
+            f"{display_name} is partitioned on {list(detail.partitionColumns)}. "
+            "Liquid clustering and traditional partitioning cannot be combined. "
+            "To migrate: rewrite the table without PARTITION BY, then re-run with cluster_by."
+        )
     spark.sql(f"ALTER TABLE delta.`{table_path}` CLUSTER BY ({cluster_by.strip()})")
     print(f"  liquid clustering enabled on: {cluster_by.strip()}")
     print("  Note: clustering is applied physically on the next OPTIMIZE run.")

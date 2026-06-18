@@ -92,13 +92,15 @@ SQL syntax by operation:
 ### Table enumeration (orchestrators and table_health)
 Never use `SHOW TABLES` for table enumeration — it requires Lakehouse attachment and does not support schema-enabled Lakehouses. Use `mssparkutils.fs.ls()` with `_delta_log` detection instead. Schema-enabled Lakehouses have a `Tables/{schema}/{table}` structure; non-schema Lakehouses have `Tables/{table}`. The `list_delta_tables()` function handles both by checking whether each top-level directory contains `_delta_log` (table) or not (schema folder, recurse one level). This function is defined identically in `dopt_utility_table_health`, `dopt_utility_maintenance_orchestrator`, and `dopt_utility_set_properties_orchestrator`.
 
+The duplication is intentional — each notebook must be self-contained so practitioners can import any single notebook without external dependencies. At v1.0 (Python package), `list_delta_tables()` moves into the package and the notebooks become thin imports.
+
 ### Deletion vectors
 Enabling `delta.enableDeletionVectors` upgrades the Delta table protocol. Always document this warning in the notebook header.
 
 ### Liquid clustering
 - `ALTER TABLE ... CLUSTER BY (...)` enables clustering but does not physically cluster data
 - OPTIMIZE must run to apply clustering physically
-- Do not enable on partitioned tables
+- Do not enable on partitioned tables — `dopt_utility_set_table_properties` enforces this with a `DESCRIBE DETAIL` check and raises `ValueError` with a migration hint if partition columns are present
 
 ## Notebook structure (follow this order)
 1. File header (`# Fabric notebook source` + opening METADATA)
