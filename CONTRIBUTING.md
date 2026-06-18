@@ -73,6 +73,16 @@ This library runs inside Microsoft Fabric. There is no local development environ
 
 ---
 
+## Scripts
+
+`scripts/` contains process tooling for maintainers — not runtime code.
+
+| Script | Purpose |
+|---|---|
+| `cold-read-prompt.md` | Structured AI audit prompt for cross-file consistency checks. Run at release boundaries or after large batches of changes. Update the known-non-issues list whenever a deliberate decision would otherwise be flagged repeatedly |
+
+---
+
 ## Questions
 
 Open a GitHub Discussion or Issue. For direct contact, reach out via [LinkedIn](https://www.linkedin.com/in/brad-coles/).
