@@ -103,8 +103,16 @@ The history table schema is the existing health report columns plus `run_timesta
 
 **Control table.** A Delta table mapping `table_name → layer` to allow `dopt_utility_set_properties_orchestrator` to apply per-table layer overrides (e.g. a Silver table configured with Gold properties for Direct Lake), removing the current assumption that all tables in a Lakehouse share the same layer.
 
+**Gates:**
+- *Entry:* Each feature above is specified in enough detail to build — history table schema finalised, control table schema and lookup behaviour defined, Power BI dashboard requirements documented
+- *Exit:* Validation guide written covering all v0.2 features; guide passes against a real Fabric workspace
+
 ### v0.3 — Intelligence
 Auto-detection of table type (append-only vs MERGE-heavy) to recommend and apply appropriate settings. Cluster key recommendations based on column cardinality and query patterns (where accessible).
+
+**Gates:**
+- *Entry:* Detection approach defined — which Delta log or table statistics signals distinguish append-only from MERGE-heavy; which metadata is available in Fabric to support cluster key recommendations
+- *Exit:* Validation guide written covering all v0.3 features; guide passes against a real Fabric workspace
 
 ### v1.0 — Python Package
 `pip`-installable. Works inside Fabric notebooks and local development. Stable public API. The notebook library becomes a thin wrapper over the package.
