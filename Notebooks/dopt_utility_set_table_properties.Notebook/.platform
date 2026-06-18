@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Notebook",
+    "displayName": "dopt_utility_set_table_properties"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "577e08b6-dab0-bcdd-4293-07f4a33fdde5"
+  }
+}
