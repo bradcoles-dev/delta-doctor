@@ -30,6 +30,7 @@ The library is:
 | `dopt_utility_table_maintenance` | Runs OPTIMIZE (if needed) and VACUUM (weekly or forced) on a single table, parameterised by the calling pipeline | Called as the final step of each pipeline load |
 | `dopt_utility_maintenance_orchestrator` | Iterates across all tables in a Lakehouse and calls `dopt_utility_table_maintenance` for each, with layer-aware defaults | Scheduled pipeline; useful before adopting per-table pipeline calls |
 | `dopt_utility_set_table_properties` | Sets Delta table properties (deletion vectors, auto-compaction, optimize write, V-Order) on a single table based on its medallion layer. Properties persist across sessions — correct for multi-writer tables | Run once per table at setup time, or called from an onboarding pipeline |
+| `dopt_utility_set_properties_orchestrator` | Iterates all tables in a Lakehouse and calls `dopt_utility_set_table_properties` for each. Run once per Lakehouse at onboarding time, passing the matching `layer` for that Lakehouse | One-off onboarding pipeline; run once per medallion Lakehouse |
 
 > **Status:** The library is under active development. See [Roadmap](#roadmap) below.
 
@@ -75,6 +76,8 @@ Five notebooks covering session config, table health scanning, single-table main
 
 ### v0.2 — Observability
 Maintenance history logging to a Delta table. Per-table trend tracking — file count, average file size, OPTIMIZE/VACUUM run history. Enables dashboarding in Power BI.
+
+A Fabric SQL database control table mapping `table_name → layer` is also planned for v0.2. This would allow `dopt_utility_set_properties_orchestrator` to apply per-table layer overrides (e.g. a Silver table configured with Gold properties for Direct Lake), removing the current assumption that all tables in a Lakehouse share the same layer.
 
 ### v0.3 — Intelligence
 Auto-detection of table type (append-only vs MERGE-heavy) to recommend and apply appropriate settings. Cluster key recommendations based on column cardinality and query patterns (where accessible).
