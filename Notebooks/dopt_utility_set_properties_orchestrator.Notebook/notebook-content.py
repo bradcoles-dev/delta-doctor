@@ -12,33 +12,28 @@
 # MARKDOWN ********************
 
 # # dopt_utility_set_properties_orchestrator
-#
-# ## Purpose
+# # ## Purpose
 # Iterates all tables in a Lakehouse and calls `dopt_utility_set_table_properties` for
 # each, applying the correct Delta table properties for the given medallion layer. Run
 # this once when onboarding a Lakehouse to delta-optimizer, or after adding a batch of
 # new tables.
-#
-# ## What it does
+# # ## What it does
 # - Lists all tables in the Lakehouse via `SHOW TABLES`
 # - Calls `dopt_utility_set_table_properties` for each table, passing the Lakehouse GUID,
 #   table name, and layer
 # - Catches and logs errors per table — one failing table does not stop the run
 # - Prints a summary of tables updated and errored
-#
-# ## When to use this vs dopt_utility_set_table_properties
+# # ## When to use this vs dopt_utility_set_table_properties
 # Use this orchestrator to initialise an entire Lakehouse in one pipeline step. Once
 # tables are configured, prefer calling `dopt_utility_set_table_properties` individually
 # when adding new tables — there is no need to re-run the full Lakehouse on every change.
-#
-# ## One Lakehouse per layer
+# # ## One Lakehouse per layer
 # This notebook assumes one Lakehouse per medallion layer, which is the standard Fabric
 # pattern. Run it once per Lakehouse, passing the matching `layer` parameter each time:
 # - Bronze Lakehouse → `layer = "bronze"`
 # - Silver Lakehouse → `layer = "silver"`
 # - Gold Lakehouse   → `layer = "gold"`
-#
-# ## Note on the workspace name
+# # ## Note on the workspace name
 # `mssparkutils.notebook.run()` identifies the target notebook by name within the same
 # Fabric workspace. Ensure `dopt_utility_set_table_properties` has been imported into
 # the same workspace as this orchestrator before running.

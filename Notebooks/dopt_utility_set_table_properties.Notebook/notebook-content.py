@@ -51,8 +51,7 @@
 # before enabling.
 # Enabling clustering does not physically cluster the data. The next OPTIMIZE run (via
 # `dopt_utility_table_maintenance` or the orchestrator) applies it.
-#
-# ## Warning — deletion vectors upgrade the table protocol
+# # ## Warning — deletion vectors upgrade the table protocol
 # Enabling deletion vectors upgrades the Delta table reader/writer protocol. The table will
 # not be readable by clients that do not support deletion vectors. Verify client compatibility
 # before enabling on a table that is read by external tools or connectors.
