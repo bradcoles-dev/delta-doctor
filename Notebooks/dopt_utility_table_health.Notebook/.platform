@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Notebook",
+    "displayName": "dopt_utility_table_health"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "3f8163a8-cb3e-9e16-4306-e763fa689453"
+  }
+}

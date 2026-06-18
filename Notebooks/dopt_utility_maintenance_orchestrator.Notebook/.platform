@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Notebook",
+    "displayName": "dopt_utility_maintenance_orchestrator"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "9537e269-a1c2-8e4d-4a54-378d42c94f38"
+  }
+}
