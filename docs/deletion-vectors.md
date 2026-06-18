@@ -52,6 +52,10 @@ After running this, note the completion timestamp — that is the reference poin
 
 ## How to Enable
 
+**Using delta-optimizer:** Pass `lakehouse_guid`, `table_name`, and `layer` to `dopt_utility_set_table_properties`. Deletion vectors are enabled by default for all layers. Run `dopt_utility_set_properties_orchestrator` to enable across all tables in a Lakehouse at once.
+
+**Manually via SQL:**
+
 ```sql
 -- On a new table
 CREATE TABLE my_catalog.silver.my_table (...)

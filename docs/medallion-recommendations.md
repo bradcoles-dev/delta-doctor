@@ -16,6 +16,7 @@ Purpose: ingest raw source data as fast as possible with minimal transformation.
 | `optimize.fast.enabled` | Enable (`true`) | No downside |
 | `optimize.fileLevelTarget.enabled` | Enable (`true`) | Officially recommended by Microsoft |
 | V-Order | No action needed | Off by default in new Fabric workspaces — no Direct Lake/SQL Endpoint consumers at Bronze; write penalty not justified if enabled |
+| `delta.targetFileSize` | **128 MB** | Set as table property via `dopt_utility_set_table_properties`; gives ATFS a per-table ceiling |
 | Deletion Vectors | Enable for tables with MERGE patterns | See [deletion-vectors.md](./deletion-vectors.md) |
 | Scheduled OPTIMIZE | Not needed for append-only loads; run after MERGE-heavy loads | Auto-compaction sufficient for simple appends |
 | VACUUM | Weekly, retain 168h | High write volume |
@@ -34,6 +35,7 @@ Purpose: cleansed, joined, business-rule-applied data. May feed Direct Lake sema
 | `optimize.fast.enabled` | Enable (`true`) | |
 | `optimize.fileLevelTarget.enabled` | Enable (`true`) | |
 | V-Order | **Selective** | Off by default — explicitly enable via table property for tables feeding Direct Lake/SQL Endpoint. Leave off for Spark-only Silver tables |
+| `delta.targetFileSize` | **256 MB** | Set as table property via `dopt_utility_set_table_properties`; gives ATFS a per-table ceiling |
 | Deletion Vectors | Enable for tables with frequent updates | |
 | Liquid Clustering | **Recommended** | Preferred over partitioning for new Silver tables; use Z-Order only on already-partitioned tables |
 | Scheduled OPTIMIZE | **Run aggressively** | Auto-compaction alone is insufficient for SQL/BI consumers; run after each load or on a schedule |
@@ -53,6 +55,7 @@ Purpose: aggregated, presentation-ready data. Primary source for Power BI Direct
 | `optimize.fast.enabled` | Enable (`true`) | Has no effect on Liquid Clustered tables — full OPTIMIZE always runs there |
 | `optimize.fileLevelTarget.enabled` | Enable (`true`) | |
 | V-Order | **Enable** | Off by default in new Fabric workspaces — explicitly enable at session level for all Gold notebooks; use `OPTIMIZE VORDER` to re-encode existing files |
+| `delta.targetFileSize` | **400 MB** | Set as table property via `dopt_utility_set_table_properties`; gives ATFS a per-table ceiling |
 | Deletion Vectors | Enable; minimise accumulation via regular compaction | Accumulated deletion vectors add overhead to Direct Lake cold-state loading |
 | Liquid Clustering | **Required** | Optimal file skipping for Gold consumers; data is only clustered when OPTIMIZE runs |
 | Scheduled OPTIMIZE | **Run aggressively** | Required for Liquid Clustering to take effect, Direct Lake deletion vector cleanup, and hitting 400 MB–1 GB file size targets |
@@ -70,7 +73,11 @@ Purpose: aggregated, presentation-ready data. Primary source for Power BI Direct
 
 ## Session Config by Layer
 
-### Shared utility (all layers)
+**Using delta-optimizer:** Call `dopt_utility_session_config` at the top of every pipeline notebook, passing `layer` as a parameter (`"bronze"`, `"silver"`, `"gold"`, or `"custom"`). It applies the full baseline and layer overrides in a single call. The raw config below is what the notebook applies — it is here for reference only.
+
+**Table properties** (`delta.targetFileSize`, deletion vectors, V-Order per-table, auto-compact, optimize write) are set separately via `dopt_utility_set_table_properties` — run once per table at onboarding, not on every pipeline execution.
+
+### Shared baseline (all layers)
 
 ```python
 spark.conf.set("spark.sql.caseSensitive", "true")
@@ -82,27 +89,25 @@ spark.conf.set("spark.databricks.delta.optimizeWrite.enabled", "true")   # expli
 spark.conf.set("spark.sql.parquet.vorder.default", "false")               # explicit baseline
 ```
 
-### Bronze notebooks (add after calling session config)
+### Bronze override
 
 ```python
 # Disable optimizeWrite for append-only Bronze ingest — shuffle overhead not justified
 spark.conf.set("spark.databricks.delta.optimizeWrite.enabled", "false")
-# V-Order: no action needed — off by default; no Direct Lake consumers at Bronze
 ```
 
-### Gold notebooks (add after calling session config)
+### Gold override
 
 ```python
 # Enable V-Order — consumer-facing layer; read performance gains fully realised
 spark.conf.set("spark.sql.parquet.vorder.default", "true")
 ```
 
-### Append-only batch notebooks at Silver — any layer
+### Append-only batch notebooks at Silver
 
 ```python
 # Disable optimizeWrite for append-only batch loads — shuffle overhead not justified
 spark.conf.set("spark.databricks.delta.optimizeWrite.enabled", "false")
-# V-Order: enable via table property on tables feeding Direct Lake/SQL Endpoint (see v-order.md)
 ```
 
 ### MERGE / UPDATE / DELETE notebooks — any layer

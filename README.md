@@ -17,7 +17,7 @@ This library gives Fabric practitioners the opinionated, medallion-aware automat
 
 The library is:
 
-- **Opinionated** — sensible defaults per medallion layer (Bronze / Silver / Gold), not a blank configuration surface
+- **Opinionated** — sensible defaults per medallion layer (Bronze / Silver / Gold), with a custom mode for non-medallion architectures
 - **Safe** — OPTIMIZE is gated on actual table health; VACUUM respects the 7-day minimum retention floor
 - **Transparent** — every decision is logged; no silent skips or silent failures
 - **Incremental** — built around Microsoft's recommended Fast Optimize, Auto-Compaction, and Adaptive Target File Size so maintenance costs almost nothing when tables are already healthy
@@ -30,9 +30,9 @@ The library is:
 |---|---|---|
 | `dopt_utility_session_config` | Sets up a Spark session with the correct baseline configurations for a given medallion layer | Called at the top of every pipeline notebook |
 | `dopt_utility_table_health` | Scans all tables in a Lakehouse and produces a health report — file counts, average file sizes, fragmentation status, deletion vector state, clustering state | Run interactively or as a pipeline step |
-| `dopt_utility_table_maintenance` | Runs OPTIMIZE (if needed) and VACUUM (weekly or forced) on a single table, parameterised by the calling pipeline | Called as the final step of each pipeline load |
-| `dopt_utility_maintenance_orchestrator` | Iterates across all tables in a Lakehouse and calls `dopt_utility_table_maintenance` for each, with layer-aware defaults | Scheduled pipeline; useful before adopting per-table pipeline calls |
-| `dopt_utility_set_table_properties` | Sets Delta table properties (deletion vectors, auto-compaction, optimize write, V-Order) on a single table based on its medallion layer. Optionally enables liquid clustering. Properties persist across sessions — correct for multi-writer tables | Run once per table at setup time, or called from an onboarding pipeline |
+| `dopt_utility_table_maintenance` | Runs OPTIMIZE (if needed) and VACUUM (weekly or forced) on a single table. Logs before/after file counts and average file size when OPTIMIZE runs | Called as the final step of each pipeline load |
+| `dopt_utility_maintenance_orchestrator` | Iterates all tables in a Lakehouse, running OPTIMIZE and VACUUM on each. Logs before/after metrics per table and prints a run summary including total files compacted | Scheduled pipeline; useful before adopting per-table pipeline calls |
+| `dopt_utility_set_table_properties` | Sets Delta table properties (deletion vectors, auto-compaction, optimize write, V-Order, target file size) on a single table by layer. Supports a custom mode for non-medallion tables. Optionally enables liquid clustering | Run once per table at setup time, or called from an onboarding pipeline |
 | `dopt_utility_set_properties_orchestrator` | Iterates all tables in a Lakehouse and calls `dopt_utility_set_table_properties` for each. Run once per Lakehouse at onboarding time, passing the matching `layer` for that Lakehouse | One-off onboarding pipeline; run once per medallion Lakehouse |
 
 > **Status:** The library is under active development. See [Roadmap](#roadmap) below.

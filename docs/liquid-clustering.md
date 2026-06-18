@@ -41,6 +41,10 @@ Source: confirmed by Miles Cole (Principal PM, Microsoft), 2026-05-20. The Datab
 
 ## How to Enable Liquid Clustering
 
+**Using delta-optimizer:** Pass the `cluster_by` parameter to `dopt_utility_set_table_properties` as a comma-separated list of column names (e.g. `"customer_id, event_date"`). The notebook runs `ALTER TABLE ... CLUSTER BY (...)` and prints a reminder that clustering is applied physically on the next OPTIMIZE run. Leave `cluster_by` empty to skip — cluster key selection is a per-table decision and is not applied by `dopt_utility_set_properties_orchestrator`.
+
+**Manually via SQL:**
+
 ```sql
 -- On a new table
 CREATE TABLE my_catalog.gold.my_table
