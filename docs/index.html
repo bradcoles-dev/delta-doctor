@@ -450,6 +450,41 @@
       user-select: none;
     }
 
+    .involve-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .involve-card {
+      display: block;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      text-decoration: none;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .involve-card:hover {
+      border-color: var(--accent-dim);
+      transform: translateY(-2px);
+    }
+
+    .involve-card h3 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--accent-bright);
+      margin-bottom: 0.45rem;
+    }
+
+    .involve-card p {
+      font-size: 0.83rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
     @media (max-width: 768px) {
       header {
         padding: 3.5rem 0 3rem;
@@ -608,6 +643,27 @@
         </ol>
         <div class="prereqs fade-in" role="note">
           <strong>Prerequisites:</strong> Microsoft Fabric workspace, Lakehouse, Spark Runtime 1.3 or later.
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="involved-heading">
+      <div class="container">
+        <p class="section-label fade-in">Get Involved</p>
+        <h2 class="section-heading fade-in" id="involved-heading">Help make it better</h2>
+        <div class="involve-grid">
+          <a href="https://github.com/bradcoles-dev/delta-doctor" class="involve-card fade-in" aria-label="Star delta-doctor on GitHub">
+            <h3>Star the repo</h3>
+            <p>If delta-doctor saves you a SKU upgrade, a star helps others find it.</p>
+          </a>
+          <a href="https://github.com/bradcoles-dev/delta-doctor/issues" class="involve-card fade-in" aria-label="Open an issue on GitHub">
+            <h3>Open an issue</h3>
+            <p>Hit an edge case or unexpected behaviour? Raise it — real-world feedback shapes the roadmap.</p>
+          </a>
+          <a href="https://github.com/bradcoles-dev/delta-doctor/pulls" class="involve-card fade-in" aria-label="Raise a pull request on GitHub">
+            <h3>Raise a PR</h3>
+            <p>Table configurations that don't fit the layer model are especially welcome.</p>
+          </a>
         </div>
       </div>
     </section>
