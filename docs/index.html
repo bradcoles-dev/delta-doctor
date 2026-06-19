@@ -542,7 +542,7 @@
           <div class="problem-card fade-in">
             <span class="problem-icon" aria-hidden="true">📂</span>
             <h3>Small files accumulate</h3>
-            <p>Every micro-batch write, Dataflow, or Copy activity lands small files. Without compaction, queries open thousands of files instead of dozens.</p>
+            <p>Every Dataflow, Copy activity, and Python kernel notebook (DuckDB, Polars) lands small files with no auto-compaction. Even Spark notebooks — which have auto-compaction available — still need explicit OPTIMIZE and VACUUM to stay healthy.</p>
           </div>
           <div class="problem-card fade-in">
             <span class="problem-icon" aria-hidden="true">🗑️</span>

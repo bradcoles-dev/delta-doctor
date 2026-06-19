@@ -7,7 +7,7 @@
 
 Fabric capacity SKUs double in cost at every tier. Poor Delta table maintenance silently inflates that cost over time — tables accumulate small files, [deletion vectors](docs/deletion-vectors.md) build up, [liquid clustering](docs/liquid-clustering.md) goes stale, and queries scan far more data than they need to. The platform is working harder than it should, not because you have more data or more users, but because the tables have never been properly maintained.
 
-This affects any Fabric Lakehouse, regardless of how data gets in. Whether you write with Spark notebooks, dbt-fabric, Dataflow Gen2, or Copy activity, the resulting Delta tables have identical maintenance needs. This library gives you safe, automated Delta maintenance with layer-specific defaults for Bronze, Silver, and Gold — no per-table manual configuration required.
+This affects any Fabric Lakehouse, regardless of how data gets in. Whether you write with Spark notebooks, dbt-fabric, Dataflow Gen2, Copy activity, or the Fabric Python kernel (DuckDB or Polars), the resulting Delta tables have identical maintenance needs. Python kernel tables are in worse shape by default — no auto-compaction fires and VACUUM never runs automatically. This library gives you safe, automated Delta maintenance with layer-specific defaults for Bronze, Silver, and Gold — no per-table manual configuration required.
 
 ---
 
