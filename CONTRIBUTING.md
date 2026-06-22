@@ -67,7 +67,7 @@ Check the [Roadmap](./README.md#roadmap) in the README first — your idea may a
 
 This library runs inside Microsoft Fabric. There is no local development environment — notebooks must be tested against a real Fabric workspace and Lakehouse.
 
-1. Import the notebooks into your Fabric workspace via **Import notebook** in the Data Engineering experience
+1. Download the `.ipynb` files from `dist/` and import them into your Fabric workspace via **Import notebook** in the Data Engineering experience
 2. Attach to a Lakehouse and run against real tables
 3. Verify both the happy path (OPTIMIZE runs, VACUUM runs) and the skip path (healthy table, OPTIMIZE skipped correctly)
 

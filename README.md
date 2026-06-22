@@ -95,8 +95,8 @@ Session configs apply only to the current notebook session. For tables written b
 
 > **Finding your Lakehouse GUID:** Open your Lakehouse in the Fabric UI and look at the browser URL. It follows the pattern `https://app.powerbi.com/groups/{workspace-guid}/lakehouses/{lakehouse-guid}`. For example: `https://app.powerbi.com/groups/6f9762f2-154f-4786-92c2-93b6b51e0401/lakehouses/4eb10241-c8b8-4778-b905-a36005890601` — the workspace GUID is `6f9762f2-...` and the Lakehouse GUID is `4eb10241-...`. The Lakehouse GUID is the `lakehouse_guid` parameter used throughout the library.
 
-1. Download or clone this repository
-2. Import the notebooks into your Fabric workspace via **Import notebook** in the Data Engineering experience
+1. Download the `.ipynb` files from the [`dist/`](./dist/) folder (or clone this repository)
+2. Import them into your Fabric workspace via **Import notebook** in the Data Engineering experience
 3. Start with `doctor_diagnosis_table_health` — pass `lakehouse_guid` as a parameter and run it to see the current state of your tables before changing anything
 4. Run `doctor_prevention_set_properties_orchestrator` once per Lakehouse to set the correct Delta table properties for every table. Pass the `lakehouse_guid` and the `layer` for that Lakehouse
 5. Run `doctor_treatment_rebaseline_orchestrator` once to right-size all files to the layer target and purge accumulated deletion vectors. On a previously unmaintained Lakehouse this is an expensive one-off — expect at least minutes per table. Monitor progress in the Spark UI. Once complete, use `doctor_treatment_maintenance_orchestrator` for scheduled ongoing maintenance
