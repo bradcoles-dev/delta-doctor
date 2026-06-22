@@ -11,6 +11,11 @@ e.g. `doctor_treatment_table_maintenance`, `doctor_diagnosis_table_health`
 
 **What did you expect to happen?**
 
+**Steps to reproduce**
+1. 
+2. 
+3. 
+
 **What actually happened?**
 Include output, error messages, or unexpected behaviour.
 
