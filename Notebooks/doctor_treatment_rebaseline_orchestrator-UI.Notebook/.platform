@@ -2,10 +2,10 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
   "metadata": {
     "type": "Notebook",
-    "displayName": "doctor_treatment_table_maintenance"
+    "displayName": "doctor_treatment_rebaseline_orchestrator-UI"
   },
   "config": {
     "version": "2.0",
-    "logicalId": "2726effc-37d0-9c0a-449b-c3ccb001893a"
+    "logicalId": "bfd78170-8e4c-af93-4cff-f462b0d1d05e"
   }
 }
