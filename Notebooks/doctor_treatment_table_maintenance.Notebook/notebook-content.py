@@ -17,7 +17,9 @@
 # parameter from the calling pipeline.
 # This notebook is designed to run as the **final step of a data pipeline**, after the
 # ingestion or transformation notebook for a given table has completed. It is called from
-# a Fabric pipeline using the Notebook activity, with parameters passed at runtime.
+# a Fabric pipeline using the Notebook activity, with parameters passed at runtime. It can
+# also be run interactively for ad-hoc maintenance — set `force_vacuum = True` to trigger
+# VACUUM immediately regardless of the weekly schedule.
 # ## What it does
 # - **OPTIMIZE**: Compacts small Parquet files into larger, right-sized files.
 #   Only runs if the average file size is meaningfully below the target — tables with little
@@ -119,6 +121,8 @@ if layer == "custom":
 else:
     target_mb = LAYER_TARGETS[layer]
 
+force_vacuum   = str(force_vacuum).lower() == "true"
+
 workspace_guid = mssparkutils.env.getWorkspaceId()
 onelake_base   = f"abfss://{workspace_guid}@onelake.dfs.fabric.microsoft.com/{lakehouse_guid}/Tables"
 table_path     = f"{onelake_base}/{schema_name}/{table_name}" if schema_name else f"{onelake_base}/{table_name}"
@@ -178,16 +182,22 @@ def optimize_if_needed(table_path, display_name, target_mb=400, tolerance=0.8):
         print(f"{display_name}: skipped — no files")
         return {"result": "skipped"}
 
-    if num_files_before == 1:
-        print(f"{display_name}: skipped — single file, nothing to compact")
-        return {"result": "skipped"}
-
+    is_clustered  = bool(getattr(details_before, "clusteringColumns", None))
     avg_mb_before = (details_before['sizeInBytes'] / num_files_before) / (1024**2)
     threshold_mb  = target_mb * tolerance
 
-    if avg_mb_before >= threshold_mb:
-        print(f"{display_name}: skipped — avg {avg_mb_before:.0f}MB is within tolerance of {target_mb}MB target")
-        return {"result": "skipped"}
+    if not is_clustered:
+        if num_files_before == 1:
+            print(f"{display_name}: skipped — single file, nothing to compact")
+            return {"result": "skipped"}
+
+        if avg_mb_before > target_mb * 2:
+            print(f"{display_name}: skipped — avg {avg_mb_before:.0f}MB exceeds 2x {target_mb}MB target; run doctor_treatment_rebaseline_orchestrator")
+            return {"result": "skipped"}
+
+        if avg_mb_before >= threshold_mb:
+            print(f"{display_name}: skipped — avg {avg_mb_before:.0f}MB is within tolerance of {target_mb}MB target")
+            return {"result": "skipped"}
 
     spark.sql(f"OPTIMIZE '{table_path}'")
 
@@ -256,6 +266,9 @@ def vacuum_table(table_path, display_name, retain_hours=168):
 # - Power BI Direct Lake: 400 MB–1 GB with large row groups
 # OPTIMIZE also physically applies Liquid Clustering — data is only clustered when OPTIMIZE
 # runs, not during writes. Without it, liquid clustering provides no file-skipping benefit.
+# **Note on Runtime 1.3:** On Spark Runtime 1.3, OPTIMIZE on liquid clustered tables always
+# triggers a full Z-Cube rewrite — there is no incremental evaluation until Runtime 2.0.
+# Runtime 2.0 is strongly recommended when using liquid clustering.
 # Finally, OPTIMIZE resolves deletion vectors (soft-deletes). For Gold tables serving Direct
 # Lake, accumulated deletion vectors add overhead to cold-cache query loading.
 
@@ -302,9 +315,11 @@ optimize_if_needed(table_path, display_name, target_mb=target_mb)
 
 # ── VACUUM (Sundays or forced) ─────────────────────────────────────────────────
 
-from datetime import datetime
+from datetime import datetime, timezone
 
-if force_vacuum or datetime.today().weekday() == 6:  # 6 = Sunday
+if force_vacuum or datetime.now(timezone.utc).weekday() == 6:  # 6 = Sunday (UTC)
+    if layer == "gold":
+        print(f"{display_name}: Direct Lake reminder — confirm the Power BI semantic model has been refreshed before VACUUM runs")
     vacuum_table(table_path, display_name)
 
 # METADATA ********************

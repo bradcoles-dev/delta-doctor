@@ -35,7 +35,9 @@
 # ## Prerequisites
 # - `lakehouse_guid` must be provided (see Parameters below)
 # - This notebook must reside in the same Fabric workspace as the target Lakehouse
-# - Set `layer` to match the layer you are assessing before running
+# - Set `layer` to match the layer you are assessing before running. If assessing an
+#   unclassified or mixed Lakehouse for the first time, use `layer = "custom"` with
+#   `custom_target_mb = 0` to see raw metrics without status classification
 
 
 # PARAMETERS CELL ********************
@@ -80,7 +82,7 @@ custom_target_mb = 0        # Custom mode only: target file size in MB for statu
 # - `Skip - single file` — table has one file; nothing to compact (trivially small or already fully compacted)
 # - `No target set` — custom mode with no target specified; raw metrics only
 # - `Oversized` — average file size exceeds 2× target; run `doctor_treatment_rebaseline_orchestrator` to rewrite and right-size all files. Note: average file size is a proxy — a bimodal mix of small and large files may not be detected
-# - `Healthy` — average file size is at or above target and within 2× target
+# - `Healthy` — average file size is at or above target and within 2× target. Note: average file size is a proxy — a bimodal mix of small and large files may appear Healthy on average
 # - `Review` — average file size is between 50% and 100% of target; monitor. Tables between 50% and 80% of target will receive OPTIMIZE from the maintenance notebooks; tables between 80% and 100% will be skipped
 # - `Needs OPTIMIZE` — average file size is below 50% of target; priority
 
@@ -165,10 +167,10 @@ def list_delta_tables(workspace_guid, lakehouse_guid):
                         deep_names = [d.name.rstrip('/') for d in deep_items]
                         if "_delta_log" in deep_names:
                             result.append({"schema": item_name, "table": sub_name, "path": sub_item.path.rstrip('/')})
-                    except Exception:
-                        pass
-        except Exception:
-            print(f"  Warning: could not enumerate {item.path} — skipped")
+                    except Exception as e:
+                        print(f"  Warning: could not enumerate {sub_item.path} — skipped ({e})")
+        except Exception as e:
+            print(f"  Warning: could not enumerate {item.path} — skipped ({e})")
     return result
 
 

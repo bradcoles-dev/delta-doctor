@@ -45,6 +45,17 @@
 # Each child notebook call uses `timeout_seconds=120`. Property-setting is metadata-only —
 # 120 seconds is sufficient for any OneLake-reachable table. A timeout indicates an
 # OneLake connectivity issue, not a problem with the notebook itself.
+# ## Warning — deletion vectors protocol upgrade
+# This notebook enables `delta.enableDeletionVectors = true` on **every table** in the
+# Lakehouse in a single run. This upgrades the Delta reader/writer protocol on each table —
+# the upgrade is **not reversible** on most table types without rewriting the table.
+# Clients known not to support deletion vectors include:
+# - Azure Synapse Analytics external tables
+# - Databricks runtimes prior to 11.3 LTS
+# - Some third-party BI connectors and JDBC drivers
+# If any external clients read tables in this Lakehouse, verify compatibility first. For
+# selective application, use `doctor_prevention_set_table_properties` directly on individual
+# tables — it gives you per-table control over whether deletion vectors are enabled.
 
 
 # PARAMETERS CELL ********************
@@ -144,10 +155,10 @@ def list_delta_tables(workspace_guid, lakehouse_guid):
                         deep_names = [d.name.rstrip('/') for d in deep_items]
                         if "_delta_log" in deep_names:
                             result.append({"schema": item_name, "table": sub_name, "path": sub_item.path.rstrip('/')})
-                    except Exception:
-                        pass
-        except Exception:
-            print(f"  Warning: could not enumerate {item.path} — skipped")
+                    except Exception as e:
+                        print(f"  Warning: could not enumerate {sub_item.path} — skipped ({e})")
+        except Exception as e:
+            print(f"  Warning: could not enumerate {item.path} — skipped ({e})")
     return result
 
 # METADATA ********************
@@ -174,6 +185,8 @@ updated_count = 0
 error_count   = 0
 
 print(f"Tables found: {len(tables)}")
+print("Warning: deletion vectors will be enabled on all tables, upgrading the Delta protocol.")
+print("         Verify external reader compatibility before proceeding.")
 print("-" * 60)
 
 for entry in tables:

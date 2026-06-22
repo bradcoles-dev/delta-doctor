@@ -5,13 +5,10 @@ Reference for the settings applied by `doctor_prevention_session_config`. Covers
 ## Current Config
 
 ```python
-# Ensure table names are created with correct casing, e.g. 'Bronze_TGB_GDT' not 'bronze_tgb_gdt'
-spark.conf.set("spark.sql.caseSensitive", "true")
-
 # Enable Auto-compaction — compacts small files automatically after writes
 spark.conf.set("spark.databricks.delta.autoCompact.enabled", "true")
 
-# Enable Adaptive Target File Size — adjusts compaction target based on query patterns
+# Enable Adaptive Target File Size — adapts compaction target based on table size
 spark.conf.set("spark.microsoft.delta.targetFileSize.adaptive.enabled", "true")
 
 # Enable Fast Optimize — skips OPTIMIZE when files don't genuinely need compaction (manual OPTIMIZE only)
@@ -35,9 +32,8 @@ Fabric defaults differ from Azure Synapse Analytics in two important ways — se
 
 | Setting | Fabric Default | Effect | Caveat |
 |---|---|---|---|
-| `spark.sql.caseSensitive` | `false` | Preserves exact casing in table/column names | Must be consistent — mixing sessions with and without can cause unexpected behaviour |
 | `spark.databricks.delta.autoCompact.enabled` | `false` | After each commit, Fabric compacts small files into larger ones inline | Universally recommended. Minor post-write latency; saves significant long-term fragmentation |
-| `spark.microsoft.delta.targetFileSize.adaptive.enabled` | `false` | ATFS adjusts the compaction target size based on actual query patterns rather than a static value | Best paired with `autoCompact`. Makes manual `OPTIMIZE` largely redundant for ongoing loads |
+| `spark.microsoft.delta.targetFileSize.adaptive.enabled` | `false` | ATFS adapts the compaction target based on table size — scaling the target downward for small tables and converging on the configured ceiling for large ones | Best paired with `autoCompact`. Makes manual `OPTIMIZE` largely redundant for ongoing loads |
 | `spark.databricks.delta.optimizeWrite.enabled` | **`true`** | Reshuffles data at write time to produce fewer, larger files matching the target size | **On by default in Fabric** — explicitly disable in batch ETL notebooks; see note below |
 | `spark.microsoft.delta.optimize.fast.enabled` | `false` | Skips `OPTIMIZE` when files don't genuinely need compaction — 80% reduction in compaction time reported | Applies to manual `OPTIMIZE` only; Auto Compaction uses its own logic |
 | `spark.microsoft.delta.optimize.fileLevelTarget.enabled` | `false` | Tags compacted files with the target size used, preventing recompaction when target sizes change | Pairs well with ATFS; reduces write amplification over time |

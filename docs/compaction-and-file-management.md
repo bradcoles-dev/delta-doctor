@@ -13,7 +13,7 @@ The traditional solution was a scheduled `OPTIMIZE` job. With the settings below
 
 **Setting:** `spark.databricks.delta.autoCompact.enabled = true`
 
-After each committed write, Fabric checks whether the files in the affected table partitions are below the target file size and, if so, runs an inline compaction pass before the transaction finalises.
+After each write commits, Fabric checks whether the files in the affected table partitions are below the target file size and, if so, runs an inline compaction pass.
 
 - No separate job or schedule required
 - Compaction happens in the same Spark session as the write — it runs **synchronously** after the write commits
@@ -25,12 +25,9 @@ After each committed write, Fabric checks whether the files in the affected tabl
 
 **Setting:** `spark.microsoft.delta.targetFileSize.adaptive.enabled = true`
 
-Rather than targeting a fixed file size (the default is 128 MB), ATFS learns the actual query patterns on the table and adjusts the compaction target accordingly:
+Rather than targeting a fixed file size (the default is 128 MB), ATFS adapts the compaction target based on table size — preventing a 10 MB table from being forced into a single 400 MB file. For small tables it scales the target downward proportionally; for large tables it converges on the configured ceiling.
 
-- Tables queried with fine-grained filters → smaller target files (faster selective reads)
-- Tables scanned broadly → larger target files (fewer files to open per full scan)
-
-This means you do not need to manually tune `delta.targetFileSize` per table.
+`doctor_prevention_set_table_properties` sets `delta.targetFileSize` as a per-table ceiling. ATFS then adapts downward from that ceiling for small tables. The two work together: ATFS needs a ceiling to adapt from; the table property provides it.
 
 ### ATFS + Auto-Compaction Together
 

@@ -79,5 +79,5 @@ For each finding:
 
 If an area demonstrates good transparency and responsible disclosure, say so in one line. Be direct — a library that runs VACUUM and REORG on production tables needs to earn trust explicitly, not assume it.
 
-Working directory: `C:\Users\bradc\OneDrive\Desktop\Git Repos\delta-optimizer`
+Working directory: `C:\Users\bradc\OneDrive\Desktop\Git Repos\delta-doctor`
 ```

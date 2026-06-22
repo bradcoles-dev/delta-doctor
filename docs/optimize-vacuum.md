@@ -66,7 +66,7 @@ def optimize_if_needed(table_path, target_mb=400, tolerance=0.8):
         print(f"{table_path}: skipped — avg file size {avg_file_size_mb:.0f}MB is within tolerance of {target_mb}MB target")
 ```
 
-> This is a simplified example. The full implementation in `doctor_treatment_table_maintenance` includes before/after file count metrics, a result dict for summary reporting, and a single-file skip.
+> This is a simplified example. The full implementation in `doctor_treatment_table_maintenance` includes before/after file count metrics, a result dict for summary reporting, a single-file skip, an oversized-table skip, and — critically — a liquid clustering bypass that always runs OPTIMIZE on clustered tables regardless of average file size.
 
 To run OPTIMIZE and VACUUM across all tables in a Lakehouse, use `doctor_treatment_maintenance_orchestrator`. It enumerates tables via `mssparkutils.fs.ls()` with `_delta_log` detection — no `SHOW TABLES` required, and handles both schema-enabled and non-schema Lakehouses automatically.
 
@@ -143,10 +143,7 @@ VACUUM removes Parquet files no longer referenced by the Delta transaction log �
 - The 7-day window covers typical overnight batch windows, weekend gaps, and most operational response times
 - **Direct Lake:** a framed semantic model references a specific Delta commit version — VACUUM must not remove files from that version until the model has been re-framed to a newer commit
 
-```python
-# Safe retention (7 days is the default; set explicitly for clarity)
-spark.conf.set("spark.databricks.delta.retentionDurationCheck.enabled", "true")
-```
+The `retentionDurationCheck` is enabled by default — no configuration change is required. Simply pass `RETAIN 168 HOURS` explicitly:
 
 ```sql
 VACUUM '{table_path}' RETAIN 168 HOURS;

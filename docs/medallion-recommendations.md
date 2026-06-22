@@ -34,7 +34,7 @@ Purpose: cleansed, joined, business-rule-applied data. May feed Direct Lake sema
 | `optimizeWrite.enabled` | **Leave default (`true`)** for MERGE notebooks; **disable (`false`)** for append-only batch loads | MERGE/UPDATE/DELETE operations benefit from pre-write bin packing; append-only batch loads don't. The table property is set to `true` by `doctor_prevention_set_table_properties`; disable at session level for append-only pipelines — see [spark-config-utility.md](./spark-config-utility.md) |
 | `optimize.fast.enabled` | Enable (`true`) | |
 | `optimize.fileLevelTarget.enabled` | Enable (`true`) | |
-| V-Order | **Selective** | Off by default — explicitly enable via table property for tables feeding Direct Lake/SQL Endpoint. Leave off for Spark-only Silver tables |
+| V-Order | **Selective** | Off by default — explicitly enable via table property for tables feeding Direct Lake/SQL Endpoint. Leave off for Spark-only Silver tables. Enable via `doctor_prevention_set_table_properties` with `layer = "gold"` or `custom_v_order = "true"` — there is no Silver session-level V-Order override |
 | `delta.targetFileSize` | **256 MB** | Set as table property via `doctor_prevention_set_table_properties`; gives ATFS a per-table ceiling |
 | Deletion Vectors | **Enabled** | `doctor_prevention_set_table_properties` enables deletion vectors unconditionally at all layers — tables with frequent updates benefit most |
 | Liquid Clustering | **Recommended** | Preferred over partitioning for new Silver tables; use Z-Order only on already-partitioned tables |
@@ -80,7 +80,6 @@ Purpose: aggregated, presentation-ready data. Primary source for Power BI Direct
 ### Shared baseline (all layers)
 
 ```python
-spark.conf.set("spark.sql.caseSensitive", "true")
 spark.conf.set("spark.databricks.delta.autoCompact.enabled", "true")
 spark.conf.set("spark.microsoft.delta.targetFileSize.adaptive.enabled", "true")
 spark.conf.set("spark.microsoft.delta.optimize.fast.enabled", "true")

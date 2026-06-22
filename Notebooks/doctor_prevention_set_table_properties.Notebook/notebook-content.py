@@ -17,6 +17,13 @@
 # properties persist across Spark sessions and apply regardless of which notebook or
 # pipeline writes the table — making them more reliable than session-level configs for
 # tables with multiple writers.
+# ## Warning — deletion vectors upgrade the table protocol
+# Enabling deletion vectors upgrades the Delta table reader/writer protocol — this is
+# **not reversible** on most table types without rewriting the table. The table will not be
+# readable by clients that do not support deletion vectors, including Azure Synapse Analytics
+# external tables, some third-party connectors, and Databricks runtimes prior to 11.3 LTS.
+# Verify external reader compatibility before running. To apply properties selectively to
+# individual tables, use this notebook directly rather than the orchestrator.
 # ## What it does
 # - Applies the correct set of Delta table properties for the given layer in a single
 #   `ALTER TABLE SET TBLPROPERTIES` call
@@ -46,10 +53,11 @@
 # rather than relying on a single workspace-wide default.
 # The logic mirrors `doctor_prevention_session_config`:
 # - **Bronze**: `optimizeWrite` is disabled — append-only batch loads do not benefit from
-#   the shuffle that optimize write introduces. If your Bronze ingestion always uses MERGE,
-#   UPDATE, or DELETE, call this notebook with `layer = "custom"` and
-#   `custom_optimize_write = "true"` instead — the table property overrides the session
-#   config, so setting it correctly here is the permanent fix
+#   the shuffle that optimize write introduces. For Bronze MERGE/UPDATE/DELETE pipelines,
+#   session config takes precedence over table properties for this setting — override it
+#   in the pipeline notebook: `spark.conf.set("spark.databricks.delta.optimizeWrite.enabled", "true")`
+#   or call `doctor_prevention_session_config` with `layer = "custom"` and
+#   `custom_optimize_write = True`
 # - **Silver**: full baseline; V-Order is off because Silver tables are read by downstream
 #   Spark notebooks, not directly by Power BI
 # - **Gold**: V-Order enabled — consumer-facing tables served via Direct Lake or the SQL
@@ -67,10 +75,6 @@
 # before enabling.
 # Enabling clustering does not physically cluster the data. The next OPTIMIZE run (via
 # `doctor_treatment_table_maintenance` or the orchestrator) applies it.
-# ## Warning — deletion vectors upgrade the table protocol
-# Enabling deletion vectors upgrades the Delta table reader/writer protocol. The table will
-# not be readable by clients that do not support deletion vectors. Verify client compatibility
-# before enabling on a table that is read by external tools or connectors.
 
 
 # PARAMETERS CELL ********************

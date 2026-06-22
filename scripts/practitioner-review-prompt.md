@@ -88,5 +88,5 @@ For each finding:
 
 If a section is clear and well-executed, say so in one line. Be direct — this is a pre-release review, not a courtesy read.
 
-Working directory: `C:\Users\bradc\OneDrive\Desktop\Git Repos\delta-optimizer`
+Working directory: `C:\Users\bradc\OneDrive\Desktop\Git Repos\delta-doctor`
 ```

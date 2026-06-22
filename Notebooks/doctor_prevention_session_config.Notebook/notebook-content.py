@@ -15,9 +15,10 @@
 # ## Purpose
 # Sets the Spark session configuration baseline for a given medallion layer.
 # Call this notebook at the top of every pipeline notebook using
-# `mssparkutils.notebook.run("doctor_prevention_session_config")` or
-# `%run doctor_prevention_session_config`. It establishes a consistent, known configuration
-# regardless of workspace defaults - which vary by workspace age and history.
+# `mssparkutils.notebook.run("doctor_prevention_session_config")`. It establishes a
+# consistent, known configuration regardless of workspace defaults - which vary by workspace
+# age and history. In an interactive notebook session, `%run doctor_prevention_session_config`
+# also works — but `%run` is not available in Fabric pipeline Notebook activities.
 # ## What it does
 # - Applies the full session baseline (Auto-Compaction, ATFS, Fast Optimize, File Level
 #   Compaction Target, Optimize Write, V-Order)
@@ -111,7 +112,6 @@ print(f"Layer: {layer}")
 # and history.
 # | Setting | Value | Why |
 # |---|---|---|
-# | `caseSensitive` | `true` | Preserves exact table/column name casing |
 # | `autoCompact.enabled` | `true` | Inline compaction after each write - prevents small file accumulation |
 # | `targetFileSize.adaptive.enabled` | `true` | ATFS adjusts compaction target to table size - eliminates manual tuning |
 # | `optimize.fast.enabled` | `true` | Skips OPTIMIZE on bins that don't need compaction - reduces write amplification |
@@ -124,7 +124,6 @@ print(f"Layer: {layer}")
 
 # ── Baseline ──────────────────────────────────────────────────────────────────
 
-spark.conf.set("spark.sql.caseSensitive",                               "true")
 spark.conf.set("spark.databricks.delta.autoCompact.enabled",            "true")
 spark.conf.set("spark.microsoft.delta.targetFileSize.adaptive.enabled", "true")
 spark.conf.set("spark.microsoft.delta.optimize.fast.enabled",           "true")

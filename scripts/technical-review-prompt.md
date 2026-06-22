@@ -101,5 +101,5 @@ For each finding:
 
 If a technical decision is sound and well-reasoned, say so in one line. Be direct — incorrect technical decisions in a maintenance library can cause data loss or performance regressions.
 
-Working directory: `C:\Users\bradc\OneDrive\Desktop\Git Repos\delta-optimizer`
+Working directory: `C:\Users\bradc\OneDrive\Desktop\Git Repos\delta-doctor`
 ```

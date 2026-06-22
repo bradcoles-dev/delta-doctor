@@ -20,34 +20,45 @@
 # ## What it does
 # - Enumerates all tables via the OneLake ABFSS path — handles both schema-enabled and
 #   non-schema Lakehouses automatically
-# - Runs `REORG TABLE APPLY (PURGE)` on every table, rewriting all files and purging
-#   accumulated deletion vectors
+# - Runs `REORG TABLE APPLY (PURGE)` on every table, rewriting only files that contain
+#   deletion vectors and purging them
 # - Immediately follows each REORG with OPTIMIZE to right-size files to the layer target
 # - Catches and logs errors per table — one failing table does not stop the run
 # - Prints before/after file counts and average file size per table, and a run summary
 # ## When to use this
-# Run this notebook **once** as part of the onboarding sequence:
+# Run this notebook as part of the onboarding sequence — designed for one-off use, but
+# safe to re-run if needed (a second run on an already-baselined Lakehouse is low-cost:
+# REORG finds no deletion vectors to purge, and OPTIMIZE completes quickly — Fast Optimize
+# skips bins that do not need compaction):
 # 1. Run `doctor_prevention_set_properties_orchestrator` to set `delta.targetFileSize` and
 #    other table properties across all tables
 # 2. Run this notebook to rebaseline file sizes across the Lakehouse
 # 3. Switch to `doctor_treatment_maintenance_orchestrator` (or `doctor_treatment_table_maintenance`
 #    per pipeline) for ongoing maintenance going forward
-# Do not include this notebook in a recurring pipeline — it performs a full rewrite of
-# every table and is expensive to run repeatedly.
-# ## Warning — full table rewrite
-# `REORG TABLE APPLY (PURGE)` rewrites every Parquet file in every table. On a large
-# or neglected Lakehouse this will take significant time — expect at least minutes per
-# table depending on size and fragmentation. Monitor progress in the Spark UI.
-# ## Warning — deletion vectors upgrade the table protocol
-# REORG APPLY (PURGE) purges deletion vectors. Ensure clients reading these tables
-# support deletion vectors before running. If deletion vectors have not yet been enabled
-# via `doctor_prevention_set_table_properties`, REORG has no deletion vectors to purge —
-# it still rewrites and right-sizes the files.
+# Do not include this notebook in a recurring pipeline — use `doctor_treatment_maintenance_orchestrator`
+# for ongoing scheduled maintenance instead.
+# ## Warning — expensive operation
+# `REORG TABLE APPLY (PURGE)` rewrites files that contain deletion vectors — on a heavily
+# updated or previously unmaintained Lakehouse this may be a large portion of each table.
+# OPTIMIZE then right-sizes all files to the layer target. Together these two operations
+# can take significant time — expect at least minutes per table. Monitor in the Spark UI.
+# ## Warning — deletion vectors and protocol upgrade
+# Deletion vectors were enabled by `doctor_prevention_set_properties_orchestrator` in the
+# previous step. If you have not yet verified that all clients reading these tables support
+# deletion vectors, do not proceed — see `docs/deletion-vectors.md`.
+# If deletion vectors have not been enabled on a table, REORG has nothing to purge —
+# OPTIMIZE still runs and right-sizes files to the layer target.
 # ## Prerequisites
 # - `doctor_prevention_set_properties_orchestrator` must have been run first to set
 #   `delta.targetFileSize` as a table property — this gives ATFS the per-table ceiling
 #   it needs to right-size files correctly during OPTIMIZE
 # - This notebook must reside in the same Fabric workspace as the target Lakehouse
+# ## Post-rebaseline VACUUM
+# REORG TABLE APPLY (PURGE) rewrites files containing deletion vectors, but the original
+# files remain on disk until VACUUM removes them. After rebaseline completes, schedule a
+# VACUUM pass via `doctor_treatment_maintenance_orchestrator` with `force_vacuum = True` —
+# but only after the 7-day retention window has elapsed from the rebaseline run date.
+# Running VACUUM before 7 days risks removing files still referenced by open transactions.
 # ## One Lakehouse per layer
 # This notebook assumes one Lakehouse per medallion layer. Run it once per Lakehouse,
 # passing the matching `layer` parameter each time:
@@ -157,18 +168,18 @@ def list_delta_tables(workspace_guid, lakehouse_guid):
                         deep_names = [d.name.rstrip('/') for d in deep_items]
                         if "_delta_log" in deep_names:
                             result.append({"schema": item_name, "table": sub_name, "path": sub_item.path.rstrip('/')})
-                    except Exception:
-                        pass
-        except Exception:
-            print(f"  Warning: could not enumerate {item.path} — skipped")
+                    except Exception as e:
+                        print(f"  Warning: could not enumerate {sub_item.path} — skipped ({e})")
+        except Exception as e:
+            print(f"  Warning: could not enumerate {item.path} — skipped ({e})")
     return result
 
 
 def rebaseline_table(table_path, display_name):
     """
     Runs REORG TABLE APPLY (PURGE) followed by OPTIMIZE on a Delta table.
-    REORG rewrites all files and purges accumulated deletion vectors.
-    OPTIMIZE right-sizes the resulting files to the layer target via ATFS.
+    REORG rewrites only files that contain deletion vectors and purges them.
+    OPTIMIZE right-sizes all files to the layer target via ATFS.
     Skips empty tables.
     """
     details_before   = spark.sql(f"DESCRIBE DETAIL '{table_path}'").collect()[0]
@@ -181,6 +192,7 @@ def rebaseline_table(table_path, display_name):
     avg_mb_before = (details_before['sizeInBytes'] / num_files_before) / (1024**2)
 
     spark.sql(f"REORG TABLE delta.`{table_path}` APPLY (PURGE)")
+    print(f"  {display_name}: REORG complete")
     spark.sql(f"OPTIMIZE '{table_path}'")
 
     details_after   = spark.sql(f"DESCRIBE DETAIL '{table_path}'").collect()[0]
@@ -225,6 +237,7 @@ files_compacted_total = 0
 
 print(f"Tables found    : {len(tables)}")
 print(f"Target file size: {target_mb} MB")
+print(f"Note            : all tables use the {layer} target ({target_mb} MB). Designed for one-off use — safe to re-run if needed.")
 print("-" * 60)
 
 for entry in tables:
