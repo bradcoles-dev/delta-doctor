@@ -155,7 +155,7 @@ if layer == "custom":
     if custom_target_file_size_mb < 0:
         raise ValueError(f"Parameter 'custom_target_file_size_mb' must be 0 (skip) or a positive integer. Got: {custom_target_file_size_mb}")
 
-workspace_guid = mssparkutils.env.getWorkspaceId()
+workspace_guid = spark.conf.get("trident.workspace.id")
 onelake_base   = f"abfss://{workspace_guid}@onelake.dfs.fabric.microsoft.com/{lakehouse_guid}/Tables"
 table_path     = f"{onelake_base}/{schema_name}/{table_name}" if schema_name else f"{onelake_base}/{table_name}"
 display_name   = f"{schema_name}.{table_name}" if schema_name else table_name
@@ -236,12 +236,29 @@ if cluster_by.strip():
             "Liquid clustering and traditional partitioning cannot be combined. "
             "To migrate: rewrite the table without PARTITION BY, then re-run with cluster_by."
         )
+    if not detail.clusteringColumns:
+        raise ValueError(
+            f"{display_name} does not have liquid clustering enabled. "
+            "In Fabric, clustering can only be enabled at table creation time — "
+            "it cannot be added to an existing table without rewriting it.\n\n"
+            "Warning: the rewrite below replaces the Delta table and clears the transaction log, "
+            "losing all history (time travel, restore points). "
+            "Do not use on SCD2 tables or any table where history must be preserved. "
+            "For those tables, enable clustering at creation time on the replacement table.\n\n"
+            "To enable on a table where history loss is acceptable, run the following in a new notebook cell:\n\n"
+            f"%%sql\n"
+            f"CREATE OR REPLACE TABLE delta.`{table_path}` "
+            f"CLUSTER BY ({cluster_by.strip()}) AS SELECT * FROM delta.`{table_path}`"
+        )
 
 if props:
     spark.sql(f"ALTER TABLE delta.`{table_path}` SET TBLPROPERTIES ({props_str})")
     print(f"Properties set on {display_name}:")
     for k, v in props.items():
-        print(f"  {k} = {v}")
+        if k == "delta.targetFileSize":
+            print(f"  {k} = {v} ({int(v) // (1024 * 1024)} MB)")
+        else:
+            print(f"  {k} = {v}")
 
 if cluster_by.strip():
     spark.sql(f"ALTER TABLE delta.`{table_path}` CLUSTER BY ({cluster_by.strip()})")

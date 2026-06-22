@@ -75,7 +75,7 @@ VACUUM must never run with a retention window below 168 hours (7 days). Enforce 
 All notebooks that reference Delta tables use ABFSS paths, not catalog-style naming (`lakehouse_guid.table_name`). The workspace GUID is derived at runtime — never passed as a parameter:
 
 ```python
-workspace_guid = mssparkutils.env.getWorkspaceId()
+workspace_guid = spark.conf.get("trident.workspace.id")
 onelake_base   = f"abfss://{workspace_guid}@onelake.dfs.fabric.microsoft.com/{lakehouse_guid}/Tables"
 table_path     = f"{onelake_base}/{schema_name}/{table_name}" if schema_name else f"{onelake_base}/{table_name}"
 ```
@@ -99,9 +99,10 @@ The duplication is intentional — each notebook must be self-contained so pract
 Enabling `delta.enableDeletionVectors` upgrades the Delta table protocol. Always document this warning in the notebook header.
 
 ### Liquid clustering
-- `ALTER TABLE ... CLUSTER BY (...)` enables clustering but does not physically cluster data
-- OPTIMIZE must run to apply clustering physically
+- In Fabric, liquid clustering can only be enabled at table creation time — `ALTER TABLE ... CLUSTER BY (...)` only works to change cluster columns on tables that already have clustering enabled. `ALTER TABLE SET TBLPROPERTIES ('delta.feature.clustering' = 'supported')` is also blocked. To enable on an existing table: `CREATE OR REPLACE TABLE delta.\`{path}\` CLUSTER BY ({col}) AS SELECT * FROM delta.\`{path}\``
+- `ALTER TABLE ... CLUSTER BY (...)` does not physically cluster data — OPTIMIZE must run to apply clustering
 - Do not enable on partitioned tables — `doctor_prevention_set_table_properties` enforces this with a `DESCRIBE DETAIL` check and raises `ValueError` with a migration hint if partition columns are present
+- `doctor_prevention_set_table_properties` also checks `detail.clusteringColumns` before attempting `ALTER TABLE CLUSTER BY` and raises `ValueError` with the `CREATE OR REPLACE TABLE` migration syntax if clustering is not already enabled
 
 ## Notebook structure (follow this order)
 1. File header (`# Fabric notebook source` + opening METADATA)

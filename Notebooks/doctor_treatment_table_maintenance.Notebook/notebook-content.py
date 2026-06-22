@@ -123,7 +123,7 @@ else:
 
 force_vacuum   = str(force_vacuum).lower() == "true"
 
-workspace_guid = mssparkutils.env.getWorkspaceId()
+workspace_guid = spark.conf.get("trident.workspace.id")
 onelake_base   = f"abfss://{workspace_guid}@onelake.dfs.fabric.microsoft.com/{lakehouse_guid}/Tables"
 table_path     = f"{onelake_base}/{schema_name}/{table_name}" if schema_name else f"{onelake_base}/{table_name}"
 display_name   = f"{schema_name}.{table_name}" if schema_name else table_name

@@ -113,7 +113,7 @@ if not layer or layer.lower() not in valid_layers:
 layer     = layer.lower()
 target_mb = LAYER_TARGETS[layer]
 
-workspace_guid = mssparkutils.env.getWorkspaceId()
+workspace_guid = spark.conf.get("trident.workspace.id")
 
 print(f"Lakehouse       : {lakehouse_guid}")
 print(f"Layer           : {layer}")

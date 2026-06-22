@@ -111,7 +111,7 @@ target_mb = LAYER_TARGETS.get(layer) or (custom_target_mb if custom_target_mb > 
 if layer != "custom" and custom_target_mb > 0:
     print(f"Note: 'custom_target_mb' is ignored when layer is '{layer}' — using {target_mb} MB layer default.")
 
-workspace_guid = mssparkutils.env.getWorkspaceId()
+workspace_guid = spark.conf.get("trident.workspace.id")
 
 print(f"Lakehouse: {lakehouse_guid}")
 print(f"Layer    : {layer}")

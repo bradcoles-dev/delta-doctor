@@ -99,7 +99,7 @@ target_mb = LAYER_TARGETS[layer]
 
 force_vacuum   = str(force_vacuum).lower() == "true"
 
-workspace_guid = mssparkutils.env.getWorkspaceId()
+workspace_guid = spark.conf.get("trident.workspace.id")
 
 print(f"Lakehouse       : {lakehouse_guid}")
 print(f"Layer           : {layer}")

@@ -164,7 +164,7 @@ delta.enableDeletionVectors = true
 delta.autoOptimize.autoCompact = true
 delta.autoOptimize.optimizeWrite = true
 delta.parquet.vorder.enabled = false
-delta.targetFileSize = 268435456
+delta.targetFileSize = 268435456 (256 MB)
 ```
 
 **Verify:** Re-run `doctor_diagnosis_table_health` — the table should now show `deletion_vectors = true`.
@@ -176,23 +176,41 @@ delta.targetFileSize = 268435456
 | `table_name` | Any table |
 | `layer` | `gold` |
 
-**Expected:** `delta.parquet.vorder.enabled = true` and `delta.targetFileSize = 419430400`.
+**Expected:** `delta.parquet.vorder.enabled = true` and `delta.targetFileSize = 419430400 (400 MB)`.
 
-### 3.3 — Liquid clustering
+### 3.3 — Liquid clustering (change cluster columns)
+
+> **Fabric constraint:** Liquid clustering can only be enabled at table creation time. `ALTER TABLE CLUSTER BY` only works to change cluster columns on a table that already has clustering. To enable clustering on an existing table you must use `CREATE OR REPLACE TABLE delta.\`{path}\` CLUSTER BY ({col}) AS SELECT * FROM delta.\`{path}\``. `doctor_prevention_set_table_properties` enforces this with a check on `detail.clusteringColumns` and raises `ValueError` with the migration syntax if clustering is not already enabled.
+
+To test the happy path, first create a clustered test table from a scratch cell:
+```python
+spark.sql(f"""
+    CREATE OR REPLACE TABLE delta.`{onelake_base}/doctor_test_clustered`
+    CLUSTER BY (id)
+    AS SELECT * FROM delta.`{onelake_base}/doctor_test_table_a`
+""")
+```
+
+Then run `doctor_prevention_set_table_properties` with:
+
 | Parameter | Value |
 |---|---|
 | `lakehouse_guid` | Your Lakehouse GUID |
-| `table_name` | A non-partitioned table |
+| `table_name` | `doctor_test_clustered` |
 | `layer` | `gold` |
-| `cluster_by` | A column name that exists in the table |
+| `cluster_by` | `id` |
 
 **Expected:** Properties set, followed by (note two leading spaces on the clustering lines):
 ```
-  liquid clustering enabled on: {column}
+  liquid clustering enabled on: id
   Note: clustering is applied physically on the next OPTIMIZE run.
 ```
 
-**Verify:** Re-run `doctor_diagnosis_table_health` — the table should show `liquid_clustering = true`.
+**Verify:** Re-run `doctor_diagnosis_table_health` — `doctor_test_clustered` should show `liquid_clustering = true`.
+
+**Error case — non-clustered table:** Run with `cluster_by = "id"` against `doctor_test_table_a` (not clustered).
+
+**Expected:** `ValueError` raised with the `CREATE OR REPLACE TABLE` migration syntax before any SQL runs.
 
 ### 3.4 — Custom mode (selective)
 | Parameter | Value |
