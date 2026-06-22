@@ -29,9 +29,11 @@
 # Run this notebook as part of the onboarding sequence — designed for one-off use, but
 # safe to re-run if needed. For non-clustered tables, a second run on an already-baselined
 # Lakehouse is low-cost: REORG finds no deletion vectors to purge, and Fast Optimize skips
-# bins that do not need compaction. For liquid clustered tables, OPTIMIZE always runs a full
-# Z-Cube pass — re-running on a large clustered Lakehouse is expensive regardless of file
-# health. Prefer the maintenance orchestrator for ongoing runs.
+# bins that do not need compaction. For liquid clustered tables on Runtime 1.3, OPTIMIZE
+# always runs a full Z-Cube pass — re-running on a large clustered Lakehouse is expensive
+# regardless of file health. On Runtime 2.0+, incremental liquid clustering means OPTIMIZE
+# only rewrites unclustered or small files, so a second run is similarly low-cost.
+# Prefer the maintenance orchestrator for ongoing runs.
 # 1. Run `doctor_prevention_set_properties_orchestrator` to set `delta.targetFileSize` and
 #    other table properties across all tables
 # 2. Run this notebook to rebaseline file sizes across the Lakehouse
