@@ -27,9 +27,11 @@
 # - Prints before/after file counts and average file size per table, and a run summary
 # ## When to use this
 # Run this notebook as part of the onboarding sequence — designed for one-off use, but
-# safe to re-run if needed (a second run on an already-baselined Lakehouse is low-cost:
-# REORG finds no deletion vectors to purge, and OPTIMIZE completes quickly — Fast Optimize
-# skips bins that do not need compaction):
+# safe to re-run if needed. For non-clustered tables, a second run on an already-baselined
+# Lakehouse is low-cost: REORG finds no deletion vectors to purge, and Fast Optimize skips
+# bins that do not need compaction. For liquid clustered tables, OPTIMIZE always runs a full
+# Z-Cube pass — re-running on a large clustered Lakehouse is expensive regardless of file
+# health. Prefer the maintenance orchestrator for ongoing runs.
 # 1. Run `doctor_prevention_set_properties_orchestrator` to set `delta.targetFileSize` and
 #    other table properties across all tables
 # 2. Run this notebook to rebaseline file sizes across the Lakehouse
@@ -59,6 +61,13 @@
 # VACUUM pass via `doctor_treatment_maintenance_orchestrator` with `force_vacuum = True` —
 # but only after the 7-day retention window has elapsed from the rebaseline run date.
 # Running VACUUM before 7 days risks removing files still referenced by open transactions.
+# The rebaseline summary prints a completion timestamp to anchor this window.
+# ## If a table errors mid-rebaseline
+# If a table logs "REORG complete" but then errors on OPTIMIZE (e.g. out of memory on a
+# very large table), no data is lost — REORG has written new files; the originals remain
+# on disk until VACUUM runs. Re-run this notebook to retry OPTIMIZE on the failed table
+# (REORG will be a no-op on already-purged files), or run OPTIMIZE manually via
+# `doctor_treatment_table_maintenance` with `force_vacuum = False`.
 # ## One Lakehouse per layer
 # This notebook assumes one Lakehouse per medallion layer. Run it once per Lakehouse,
 # passing the matching `layer` parameter each time:
@@ -255,8 +264,11 @@ for entry in tables:
         print(f"  {display_name}: ERROR — {str(e)}")
         error_count += 1
 
+from datetime import datetime, timezone
+
 print("-" * 60)
 print(f"Summary — rebaselined: {rebaselined_count} | skipped: {skipped_count} | errors: {error_count} | files compacted: {files_compacted_total:,}")
+print(f"Completed at: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}. Schedule VACUUM no earlier than 7 days from this timestamp.")
 
 # METADATA ********************
 

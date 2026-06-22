@@ -65,7 +65,7 @@ Read ALL of the following files in full:
 
 **ABFSS paths:**
 - All table references use ABFSS paths, not catalog-style naming?
-- `mssparkutils.env.getWorkspaceId()` used everywhere the workspace GUID is needed?
+- `spark.conf.get("trident.workspace.id")` used everywhere the workspace GUID is needed?
 
 **Parameter correctness:**
 - Does `doctor_treatment_table_maintenance` raise `ValueError` when `layer = "custom"` and `custom_target_mb` is 0?
@@ -106,5 +106,5 @@ List every real issue found. For each:
 
 If a category is clean, say so in one line. If there are NO issues at all, say so clearly.
 
-Working directory: `C:\Users\bradc\OneDrive\Desktop\Git Repos\delta-optimizer`
+Working directory: `C:\Users\bradc\OneDrive\Desktop\Git Repos\delta-doctor`
 ```

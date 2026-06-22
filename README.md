@@ -39,6 +39,8 @@ delta-doctor is organised around three pillars: **Diagnosis**, **Treatment**, an
 |---|---|---|
 | `doctor_diagnosis_table_health` | Scans all tables in a Lakehouse and produces a health report — file counts, average file sizes, fragmentation status, deletion vector state, clustering state. Classifies each table as Healthy, Review, Needs OPTIMIZE, Oversized, or a skip status | Run interactively before onboarding, or any time you want a current picture |
 
+![doctor_diagnosis_table_health output showing a health report with file counts, average file sizes, and status classifications per table](docs/screenshots/health-report.png)
+
 ### Treatment
 *Fix what is broken and restore tables to a healthy baseline.*
 
@@ -91,11 +93,11 @@ Session configs apply only to the current notebook session. For tables written b
 
 ## Getting Started
 
-> **Prerequisites:** Microsoft Fabric workspace with a Lakehouse and Spark runtime (Runtime 1.3 or later; Runtime 2.0 strongly recommended if using liquid clustering — see `docs/liquid-clustering.md` for material behavioural differences on Runtime 1.3). All notebooks must reside in the same Fabric workspace as the target Lakehouse — the workspace GUID is derived automatically at runtime via `mssparkutils.env.getWorkspaceId()`. The identity running the notebooks must have at least **Contributor** permissions on the Fabric workspace and write access to the target Lakehouse.
+> **Prerequisites:** Microsoft Fabric workspace with a Lakehouse and Spark runtime (Runtime 1.3 or later; Runtime 2.0 strongly recommended if using liquid clustering — see `docs/liquid-clustering.md` for material behavioural differences on Runtime 1.3). All notebooks must reside in the same Fabric workspace as the target Lakehouse — the workspace GUID is derived automatically at runtime via `spark.conf.get("trident.workspace.id")`. The identity running the notebooks must have at least **Contributor** permissions on the Fabric workspace and write access to the target Lakehouse.
 
 > **Finding your Lakehouse GUID:** Open your Lakehouse in the Fabric UI and look at the browser URL. It follows the pattern `https://app.powerbi.com/groups/{workspace-guid}/lakehouses/{lakehouse-guid}`. For example: `https://app.powerbi.com/groups/6f9762f2-154f-4786-92c2-93b6b51e0401/lakehouses/4eb10241-c8b8-4778-b905-a36005890601` — the workspace GUID is `6f9762f2-...` and the Lakehouse GUID is `4eb10241-...`. The Lakehouse GUID is the `lakehouse_guid` parameter used throughout the library.
 
-1. Download the `.ipynb` files from the [`dist/`](./dist/) folder (or clone this repository)
+1. Download the `.ipynb` files from the [`notebooks/dist/`](./notebooks/dist/) folder (or clone this repository)
 2. Import them into your Fabric workspace via **Import notebook** in the Data Engineering experience
 3. Start with `doctor_diagnosis_table_health` — pass `lakehouse_guid` as a parameter and run it to see the current state of your tables before changing anything
 4. Run `doctor_prevention_set_properties_orchestrator` once per Lakehouse to set the correct Delta table properties for every table. Pass the `lakehouse_guid` and the `layer` for that Lakehouse

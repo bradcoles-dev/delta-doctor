@@ -57,7 +57,7 @@
 #   session config takes precedence over table properties for this setting — override it
 #   in the pipeline notebook: `spark.conf.set("spark.databricks.delta.optimizeWrite.enabled", "true")`
 #   or call `doctor_prevention_session_config` with `layer = "custom"` and
-#   `custom_optimize_write = True`
+#   `custom_optimize_write = "true"`
 # - **Silver**: full baseline; V-Order is off because Silver tables are read by downstream
 #   Spark notebooks, not directly by Power BI
 # - **Gold**: V-Order enabled — consumer-facing tables served via Direct Lake or the SQL
@@ -66,7 +66,8 @@
 # If a Silver table is consumed directly by Power BI Direct Lake (skipping a Gold layer),
 # call this notebook with `layer = "gold"` for that table. The Gold configuration is correct
 # for any table that is the terminal layer for Direct Lake or SQL Endpoint consumers —
-# regardless of what it is named.
+# regardless of what it is named. Note: this sets `delta.targetFileSize` to 400 MB on that
+# table — appropriate for Direct Lake consumers but higher than the 256 MB Silver default.
 # ## Liquid clustering
 # Pass a comma-separated list of column names in `cluster_by` to enable liquid clustering
 # on the table (e.g. `"customer_id, order_date"`). Leave empty to skip.

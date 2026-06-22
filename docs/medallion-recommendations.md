@@ -34,7 +34,7 @@ Purpose: cleansed, joined, business-rule-applied data. May feed Direct Lake sema
 | `optimizeWrite.enabled` | **Leave default (`true`)** for MERGE notebooks; **disable (`false`)** for append-only batch loads | MERGE/UPDATE/DELETE operations benefit from pre-write bin packing; append-only batch loads don't. The table property is set to `true` by `doctor_prevention_set_table_properties`; disable at session level for append-only pipelines — see [spark-config-utility.md](./spark-config-utility.md) |
 | `optimize.fast.enabled` | Enable (`true`) | |
 | `optimize.fileLevelTarget.enabled` | Enable (`true`) | |
-| V-Order | **Selective** | Off by default — explicitly enable via table property for tables feeding Direct Lake/SQL Endpoint. Leave off for Spark-only Silver tables. Enable via `doctor_prevention_set_table_properties` with `layer = "gold"` or `custom_v_order = "true"` — there is no Silver session-level V-Order override |
+| V-Order | **Selective** | Off by default — explicitly enable via table property for tables feeding Direct Lake/SQL Endpoint. Leave off for Spark-only Silver tables. To enable V-Order without changing other Silver properties, use `layer = "custom"` with `custom_v_order = "true"` in `doctor_prevention_set_table_properties`. Using `layer = "gold"` also enables V-Order but additionally sets `delta.targetFileSize` to 400 MB — appropriate only if the Direct Lake consumer also benefits from the larger file ceiling |
 | `delta.targetFileSize` | **256 MB** | Set as table property via `doctor_prevention_set_table_properties`; gives ATFS a per-table ceiling |
 | Deletion Vectors | **Enabled** | `doctor_prevention_set_table_properties` enables deletion vectors unconditionally at all layers — tables with frequent updates benefit most |
 | Liquid Clustering | **Recommended** | Preferred over partitioning for new Silver tables; use Z-Order only on already-partitioned tables |
@@ -57,7 +57,7 @@ Purpose: aggregated, presentation-ready data. Primary source for Power BI Direct
 | V-Order | **Enable** | Off by default in new Fabric workspaces — explicitly enable at session level for all Gold notebooks; use `OPTIMIZE VORDER` to re-encode existing files |
 | `delta.targetFileSize` | **400 MB** | Set as table property via `doctor_prevention_set_table_properties`; gives ATFS a per-table ceiling |
 | Deletion Vectors | **Enabled** | `doctor_prevention_set_table_properties` enables deletion vectors unconditionally at all layers. Minimise accumulation via regular compaction — accumulated vectors add overhead to Direct Lake cold-state loading |
-| Liquid Clustering | **Required** | Optimal file skipping for Gold consumers; data is only clustered when OPTIMIZE runs |
+| Liquid Clustering | **Recommended** | Optimal file skipping for Gold consumers — opt-in via the `cluster_by` parameter in `doctor_prevention_set_table_properties`; data is only clustered when OPTIMIZE runs |
 | Scheduled OPTIMIZE | **Run aggressively** | Required for Liquid Clustering to take effect, Direct Lake deletion vector cleanup, and hitting 400 MB–1 GB file size targets |
 | VACUUM | Weekly, retain 168h | Respect Direct Lake framing window before running |
 

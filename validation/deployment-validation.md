@@ -403,7 +403,7 @@ Run `doctor_treatment_maintenance_orchestrator` with the schema-enabled Lakehous
 **Expected:**
 - All tables across all schemas are processed
 - Log lines use the schema-prefixed display name: `{schema}.{table}: ...`
-- Summary counts match the total found in Test 7.1
+- Summary counts match the total found in Test 8.1
 
 ---
 
