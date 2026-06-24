@@ -1,4 +1,4 @@
-# Fabric notebook source
+﻿# Fabric notebook source
 
 # METADATA ********************
 
@@ -15,7 +15,7 @@
 # ## Purpose
 # Sets the Spark session configuration baseline for a given medallion layer.
 # Call this notebook at the top of every pipeline notebook using
-# `mssparkutils.notebook.run("doctor_prevention_session_config")`. It establishes a
+# `notebookutils.notebook.run("doctor_prevention_session_config")`. It establishes a
 # consistent, known configuration regardless of workspace defaults - which vary by workspace
 # age and history. In an interactive notebook session, `%run doctor_prevention_session_config`
 # also works — but `%run` is not available in Fabric pipeline Notebook activities.

@@ -1,4 +1,4 @@
-# Fabric notebook source
+﻿# Fabric notebook source
 
 # METADATA ********************
 
@@ -37,7 +37,7 @@
 # - Silver Lakehouse → `layer = "silver"`
 # - Gold Lakehouse   → `layer = "gold"`
 # ## Note on the workspace
-# `mssparkutils.notebook.run()` identifies the target notebook by name within the same
+# `notebookutils.notebook.run()` identifies the target notebook by name within the same
 # Fabric workspace. Ensure `doctor_prevention_set_table_properties` has been imported into
 # the same workspace as this orchestrator before running. Both notebooks must be in the
 # same workspace as the target Lakehouse.
@@ -135,14 +135,14 @@ def list_delta_tables(workspace_guid, lakehouse_guid):
     tables_root = f"abfss://{workspace_guid}@onelake.dfs.fabric.microsoft.com/{lakehouse_guid}/Tables"
     result = []
     try:
-        top_items = mssparkutils.fs.ls(tables_root)
+        top_items = notebookutils.fs.ls(tables_root)
     except Exception as e:
         raise RuntimeError(f"Could not list Tables directory for Lakehouse {lakehouse_guid}: {e}")
 
     for item in top_items:
         item_name = item.name.rstrip('/')
         try:
-            sub_items = mssparkutils.fs.ls(item.path)
+            sub_items = notebookutils.fs.ls(item.path)
             sub_names = [s.name.rstrip('/') for s in sub_items]
             if "_delta_log" in sub_names:
                 result.append({"schema": "", "table": item_name, "path": item.path.rstrip('/')})
@@ -151,7 +151,7 @@ def list_delta_tables(workspace_guid, lakehouse_guid):
                 for sub_item in sub_items:
                     sub_name = sub_item.name.rstrip('/')
                     try:
-                        deep_items = mssparkutils.fs.ls(sub_item.path)
+                        deep_items = notebookutils.fs.ls(sub_item.path)
                         deep_names = [d.name.rstrip('/') for d in deep_items]
                         if "_delta_log" in deep_names:
                             result.append({"schema": item_name, "table": sub_name, "path": sub_item.path.rstrip('/')})
@@ -194,7 +194,7 @@ for entry in tables:
     table_name   = entry["table"]
     display_name = f"{schema_val}.{table_name}" if schema_val else table_name
     try:
-        mssparkutils.notebook.run(
+        notebookutils.notebook.run(
             "doctor_prevention_set_table_properties",
             timeout_seconds=120,
             arguments={
